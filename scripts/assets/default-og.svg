@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#F7F7F2" />
+  <rect x="72" y="64" width="8" height="502" fill="#2E259C" />
+  <rect x="80" y="64" width="176" height="8" fill="#FFD04F" />
+  <circle cx="1101" cy="91" r="19" fill="#02AD8D" />
+  <circle cx="1143" cy="91" r="10" fill="#924EB3" />
+
+  <text x="112" y="122" fill="#2E259C" font-family="Consolas, monospace" font-size="18" font-weight="700" letter-spacing="2">CHE (PERCY) LIU · MBZUAI</text>
+  <text x="112" y="226" fill="#191923" font-family="Georgia, serif" font-size="60" font-weight="700" letter-spacing="-2.5">Student researcher and builder</text>
+  <text x="112" y="294" fill="#191923" font-family="Georgia, serif" font-size="60" font-weight="700" letter-spacing="-2.5">working on AI agents,</text>
+  <text x="112" y="362" fill="#191923" font-family="Georgia, serif" font-size="60" font-weight="700" letter-spacing="-2.5">game technology, and</text>
+  <text x="112" y="430" fill="#191923" font-family="Georgia, serif" font-size="60" font-weight="700" letter-spacing="-2.5">developer tools.</text>
+
+  <line x1="112" y1="484" x2="1128" y2="484" stroke="#D9D8D0" stroke-width="2" />
+  <text x="112" y="529" fill="#5D5A69" font-family="Consolas, monospace" font-size="16" letter-spacing="1">AGENT HARNESSES · GENERATIVE MOTION · AGENT-NATIVE SYSTEMS</text>
+  <text x="112" y="565" fill="#2E259C" font-family="Consolas, monospace" font-size="15" letter-spacing="1">THECYPER.GITHUB.IO</text>
+  <text x="1128" y="565" fill="#5D5A69" text-anchor="end" font-family="Consolas, monospace" font-size="15">ABU DHABI · BEIJING</text>
+</svg>

@@ -1,0 +1,273 @@
+---
+title: "KIMODO 能做什么、不能做什么：Prompt、Constraint 与案例评测"
+description: "从一组成功与失败案例中拆解 KIMODO 的真实能力：哪些动作 prior 稳定、Constraints 能修什么，以及模型没有场景、道具状态或跨 Prompt 记忆意味着什么。"
+publishedAt: 2026-07-28
+draft: false
+publicationState: approved-for-publication
+language: zh-CN
+series:
+  id: kimodo-research-program
+  order: 1
+homepage:
+  order: 1
+  title: "KIMODO capability evaluation: prompts, constraints, and boundaries"
+  description: "A case-based evaluation of where a motion foundation model helps, where constraints help, and what the evidence still does not establish."
+  visual: kimodo-motion-field
+  visualCaption: "A prompt selects a motion prior; sparse constraints shape selected moments without supplying persistent scene or object state."
+collection: ai-animation
+topics:
+  - text-to-motion
+  - motion-authoring
+  - constraints
+  - character-animation
+featured: false
+experiment:
+  period: "2026-07-09 — 2026-07-28"
+  software:
+    - NVIDIA KIMODO
+    - Maya 2024
+    - Blender
+    - Unreal Engine 5.8
+  hardware:
+    - 生成服务端硬件未公开；本地 DCC 验证不用于推理性能结论
+verification:
+  verified:
+    - "常见 locomotion、carry、put down、bow 与部分姿态过渡可稳定产生动作草案"
+    - "Root、hand 与 full-body constraints 可以修正空间目标，但不能凭空创造冲击动力学"
+    - "Duration、动作词、分段方式与 Best-of-N 会显著改变可用率"
+    - "BONES-SEED 去镜像 metadata 为 71,132 条、144.22 小时，可作为能力分析 proxy"
+  notVerified:
+    - "BONES-SEED 的类别占比等同于 KIMODO 约 700 小时训练集的精确分布"
+    - "跨 Prompt 的文本记忆、持久 object state 或 scene understanding"
+    - "Multi-prompt chaining 使用 motion-to-motion conditioning，而不只是 overlap constraints 与 blending"
+    - "模型评测结论可以直接证明 DCC authoring system 或项目角色落地已经 production-ready"
+licenses:
+  - asset: NVIDIA KIMODO source code
+    status: linked-only
+    note: "官方源码仓库采用 Apache-2.0；本文只链接仓库，不再分发源码。"
+  - asset: NVIDIA KIMODO model checkpoints
+    status: linked-only
+    note: "Checkpoint 使用独立的 NVIDIA model terms；必须按具体模型页面核验，不能从源码许可推导。"
+  - asset: BONES-SEED metadata and motion data
+    status: linked-only
+    note: "Gated dataset；本文仅使用聚合统计，不再分发 metadata、BVH 或演员记录。"
+  - asset: "选定的本地 KIMODO 生成输出"
+    status: permitted
+    note: "Percy 已确认可在本作品集发布；该许可不推导或扩大 checkpoint、训练数据、工具或生成输出的上游条款。"
+problem: "用可复查案例回答 KIMODO 在离线动作草拟中的真实适用范围，并把 Prompt、Constraint 与数据分布各自负责的部分分开。"
+role: "评测设计、案例实验、数据分布分析与短格式 handoff 验证"
+duration: "约三周，覆盖 E01–E20、X01–X03 与多段组合实验"
+stack:
+  - KIMODO
+  - Python
+  - Maya
+  - Blender
+  - Unreal Engine
+outcomes:
+  - "形成从常见 locomotion 到武术、拳击和体育长尾的分级证据"
+  - "总结可复用的 Prompt、Duration、Best-of-N 与 Constraint 操作规则"
+  - "确认 KIMODO 更适合离线动作草案，而不是运行时生成器或完整动画师替代品"
+  - "把 SOMA BVH 到 DCC / UE Retarget 只保留为格式 handoff 边界，不用它替模型质量背书"
+---
+
+import { Callout, ClaimBoundary, ExperimentCard, VideoFigure } from "../../components/mdx";
+
+[NVIDIA KIMODO](https://research.nvidia.com/labs/sil/projects/kimodo/) 把 text-to-motion 与 sparse spatial constraints 放进同一个 motion authoring 流程。第一次看到 Demo，很容易得到一个过度乐观的印象：只要 Prompt 写得足够具体，再画几条路径，模型就能理解完整分镜。
+
+如果需要先区分生成、补帧、检索与约束，可以先看 [AI 动画技术版图](/writing/ai-animation-technology-map/)；本文聚焦 KIMODO 这一种离线 authoring 组合。
+
+实际评测得到的结论更有用，也更克制：KIMODO 很擅长在已有 motion prior 内生成全身动作草案；Prompt 负责“这是什么动作”，Constraint 负责“关键时刻去哪里”。它们都不等于场景理解、道具状态、精确动力学或动画导演系统。
+
+<ExperimentCard
+  period="2026-07-09 — 2026-07-28"
+  software={["NVIDIA KIMODO", "Maya 2024", "Blender", "Unreal Engine 5.8"]}
+  hardware={["生成服务端硬件未公开；本地 DCC 验证不用于推理性能结论"]}
+  conditions={[
+    "默认每个需求生成多个候选，再做人工评估",
+    "分别记录 Prompt match、自然度、Constraint 命中和资产落地情况",
+    "本文不使用上游 demo 或 gated dataset 媒体；选定视频来自本地评测输出",
+  ]}
+  title="评测范围"
+/>
+
+<ClaimBoundary
+  verified={[
+    "常见 locomotion、carry、put down、bow 和简单 transition 的草案能力",
+    "Root / hand / full-body constraints 对空间目标的影响",
+    "Duration、动作词、分段与 Best-of-N 对结果稳定性的影响",
+    "BONES-SEED 聚合 metadata 与部分案例结果之间的定性对应",
+  ]}
+  notVerified={[
+    "BONES-SEED 是 KIMODO 约 700 小时训练集的精确 manifest",
+    "模型会记住前一段 Prompt 的物体、人物或场景状态",
+    "Constraint 能生成训练数据中缺失的冲击、受力与表演节奏",
+    "模型能力评测可以证明 DCC authoring system、项目角色 Retarget 或商业生产已经验收",
+  ]}
+/>
+
+## 评测方法：先找质量上限，再主动撞边界
+
+我没有只挑几个成功 Prompt，而是把测试分成四类：
+
+1. **强 prior**：injured / stealth / tired walk、简单转向、carry、put down、bow。
+2. **需要空间控制**：到点停下、绕障碍、touch wall、pickup、backward dodge。
+3. **组合与时间阶段**：idle→crouch、squat→stand、多段 carry / place、gesture→locomotion。
+4. **主动失败项**：hit reaction、精确 martial arts、boxing、baseball swing。
+
+每个案例保留英文 Prompt、duration、候选数量、Constraint、输出和失败解释。评分也被拆开：Prompt category 是否命中，不等于动作自然；Constraint 到点，不等于冲击或接触可信；可以导出，不等于项目角色上已经 production-ready。
+
+最终分级很清楚：
+
+| 等级 | 代表案例 | 生产含义 |
+|---|---|---|
+| A | injured / stealth / tired walk、turn、carry、squat-to-stand、carry-and-place、bow-and-exit | 可直接作为动作草案 |
+| B | obstacle、stop、pickup、touch、idle-to-crouch、dodge、长组合 | 需要拆段、时长窗口、Constraint 或多抽样 |
+| C | drunk stagger、celebration | 能选出结果，但稳定性或表演质量不足 |
+| D | hit reaction、martial arts、baseball、boxing | 不应继续靠堆 Prompt 或路径硬调 |
+
+## Prompt 的真正职责：选择 motion prior
+
+稳定 Prompt 往往短、常见、动作结构清楚：
+
+```text
+A person walks forward while carrying a heavy object with both hands.
+A person stands still and then crouches down.
+A person is squatting and then stands up.
+```
+
+相反，把帧号、距离、角度与多个动作阶段写进一句自然语言，不会让模型变成精确控制器：
+
+```text
+Walk exactly two meters, rotate 90 degrees at frame 45,
+raise the right hand, then crouch and touch the floor.
+```
+
+坐标与时刻属于 Constraint；Prompt 更像是在训练分布中选择动作和风格。评测中还有几个更具体的规律：
+
+- `squat` 比宽泛的 `crouch` 更稳定地表达双脚着地低姿态。
+- `and then` 能为单个 Prompt 建立可读的时间阶段，但句子越长并不必然越好。
+- `carry`、`heavy`、`with both hands` 对骨架姿态的影响通常大于 `object` 与 `chest` 的名词差异。
+- `forward` 是身体坐标中的明确方向；`away` 需要一个未被表示的场景参照，更容易产生自由发挥。
+- `spin`、`flip`、`jump` 等强视觉词可能支配整个局部阶段，而不是自动成为复杂招式的一部分。
+
+<Callout type="takeaway" title="先问数据里有没有，再问 Prompt 怎么写">
+  Prompt engineering 不能创造训练分布。对强 prior，换一个更接近 caption 的动词可能立刻改善；对缺失的拳击爆发或棒球挥击，继续加形容词通常只会让失败变得更复杂。
+</Callout>
+
+## Multi-prompt 不是一场对话
+
+根据 [KIMODO 官方项目与文档](https://research.nvidia.com/labs/sil/projects/kimodo/)，模型训练时接收单个 Prompt。Demo 的 multi-prompt chaining 会分别生成各段动作，再用重叠的 full-body constraints 与 blending 保持连续。
+
+公开架构没有展示或验证跨段文本 memory、object token 或持久 scene state。因此生产中不应依赖：
+
+```text
+Segment 1: A person picks up a box.
+Segment 2: Then the person walks away while holding it.
+```
+
+第二段应该独立写完整：
+
+```text
+A person walks forward while holding a heavy box with both hands.
+```
+
+看起来仍然“拿着同一个东西”，可能来自上一段结尾姿态的 overlap、当前段自身的 holding prior 与 blending，而不是模型记住了物体身份。KIMODO 输出 body motion，没有随动作持续存在的 box geometry、collision 或 object state。
+
+<VideoFigure
+  mp4Src="/media/articles/kimodo-capability-boundaries/e14-carry-put-down-best-of-four.mp4"
+  poster="/media/articles/kimodo-capability-boundaries/e14-carry-put-down-poster.png"
+  label="Four KIMODO candidates for the carry-a-box then put-it-down prompt sequence"
+  caption="E14 的四个本地候选：两段 Prompt 分别描述 carry 与 put down。渲染只展示 body motion，没有 box geometry、collision 或持久 object state，因此手部姿态不等于已验证物体接触。"
+  width={2864}
+  height={1552}
+  credit="Percy Liu，本地 KIMODO 能力评测输出"
+  license="作品集发布许可已确认；模型与生成输出条款未由此扩大"
+  preload="metadata"
+  muted
+  wide
+/>
+
+## Constraint 能修哪里，不能修哪里
+
+[官方 Constraints 文档](https://research.nvidia.com/labs/sil/projects/kimodo/docs/key_concepts/constraints.html) 描述了 root、end-effector 与 full-body 等控制方式。本轮实验把它们的职责归纳为三层：
+
+### Root：控制路径和落点
+
+简单前进、转弯和后撤的空间意图可以被明显改善。到点停下不能只放一个 endpoint；更可靠的做法是在末尾形成短 hold 区间。
+
+但 root path 不适合表达所有风格。Drunk stagger 的浅 S-curve 仍然触发了转身 prior，让“摇晃”变成“主动改朝向”。这时删掉路径、让 Prompt 表达身体风格，反而更合理。
+
+### Hand / foot：表达接触位置
+
+Wall touch 一类任务里，Prompt 可以选择 reach / touch 动作，hand targets 再规定手应该落在哪里。如果目标离身体太远，应先移动 root，而不是让手臂单独追逐一个不可能的位置。
+
+这仍只是骨架目标。模型不知道墙面的碰撞体，也不会生成道具 mesh。
+
+### Full-body：表达必须经过的姿态
+
+Full-body keyframe 适合少量关键姿态和 in-betweening；把每一帧都锁住会压缩生成空间，使动作变僵。对严格 squat、接触姿势或特殊 silhouette，full-body reference 往往比继续加 Prompt 更直接。
+
+<Callout type="warning" title="位置约束不等于物理冲量">
+  Hit reaction 是最清楚的反例：backward root target 能把角色推到后方，却不会自动生成 recoil、weight transfer 与 recovery step。Constraint 指定了“去哪里”，没有创造“为什么这样动”的动力学。
+</Callout>
+
+## Duration 是动作阶段预算
+
+Duration 不是单纯的输出长度。Pickup 太短，模型来不及完成下蹲、接触和起身；太长，模型又可能在拿起后自行加入 put-down。Temporal Prompt 与 multi-prompt 的价值，本质上是为动作阶段分配时间。
+
+更稳的工作方式是：
+
+1. 先用 Prompt-only 生成 4–8 个候选，找到自然 seed。
+2. 只在空间意图不清楚时加入 root path。
+3. 接触事件再加入少量 hand / foot targets。
+4. 必须经过的姿态才使用 full-body keyframe。
+5. 用 duration 控制 action 与 recovery 的时间窗口。
+6. 最后用 post-processing 提高 Constraint 命中并检查 foot skating。
+
+这也解释了为什么 Best-of-N 不是临时补救。生成模型的候选差异客观存在；一个可用工具应该记录 seed、duration、CFG、Constraint 与模型版本，并让人快速淘汰明显坏样本。
+
+## BONES-SEED：有价值的 proxy，不是训练集真相
+
+KIMODO 官方项目说明模型使用约 **700 小时 optical mocap data**。但完整 RP01 / Rigplay training manifest 没有公开，因此无法从外部精确重建训练分布。
+
+我另外分析了 gated [BONES-SEED dataset card](https://huggingface.co/datasets/bones-studio/seed) 中的聚合 metadata：公开的 142,220 条、288.32 小时包含镜像增强；去掉镜像后为 **71,132 条、144.22 小时**。它可以作为高价值 proxy，因为 metadata 与 KIMODO temporal labels 能帮助解释 Prompt 结果；它不能替代约 700 小时训练集的逐 clip 统计。
+
+这个 proxy 与部分案例之间出现了可解释的定性对应：
+
+- injured leg 与 injured torso 合计 5,239 条，injured locomotion 的稳定性很高。
+- object manipulation 有大量 pickup / carry 相关证据，但完整阶段仍受 duration 影响。
+- 精确 `Martial Arts` category 只有 10 条，shadow boxing 也只有少量明确记录。
+- 26 条包含 `baseball` 的命中实际来自舞蹈中的 “baseball beat / variation”，没有形成挥棒证据。
+- 去镜像后的 temporal labels 平均每条 motion 有 2.48 个阶段，单阶段中位数约 2 秒。
+
+<Callout type="finding" title="定性对应提供解释线索，但不能反推完整训练集">
+  BONES-SEED 为某些动作容易、某些动作长期失败提供了一种数据分布解释，但这不是统计 correlation 分析，更不允许我们声称“KIMODO 的 700 小时数据中有多少比例属于某类动作”。这些结论必须分开。
+</Callout>
+
+## 最合适的产品定位
+
+在这组证据下，KIMODO 最适合被定位为**离线动作预演与草案工具**：
+
+```text
+Prompt / Duration / Constraint
+            → Best-of-N → 人工选择
+                              → SOMA BVH
+                                  → DCC format conversion
+                                      → UE Skeleton Retarget（handoff only）
+```
+
+它不是 UE Runtime 动作生成器，也不是完整的 prop-aware animation system。本文只验证到短格式 handoff：KIMODO 输出 SOMA BVH，经 DCC 做坐标、骨架与交换格式处理，再进入 UE Skeleton Retarget，成为可继续检查和修整的 AnimSequence 草案。这里没有“直接从 KIMODO 导出项目角色 FBX”的假设，也不把 DCC / UE 链路写成模型质量或 production readiness 的证据。
+
+Prompt assistant、远程服务、Maya authoring client、模型 fine-tuning 与 release engineering 属于本系列其他条目，不在这篇能力评测中展开。
+
+## 许可与公开边界
+
+KIMODO 的代码、模型权重、训练数据与生成输出不是同一份许可，不能用“项目可见”概括全部权利。本文链接 [官方项目](https://research.nvidia.com/labs/sil/projects/kimodo/)、[limitations](https://research.nvidia.com/labs/sil/projects/kimodo/docs/key_concepts/limitations.html)、[configuration](https://research.nvidia.com/labs/sil/projects/kimodo/docs/user_guide/configuration.html) 与数据卡，并只加入上方一段经确认可在本作品集发布的本地生成输出；不再分发上游代码、模型、BONES metadata、BVH 或第三方视频。该发布许可不推导或扩大任何上游条款。
+
+未来若公开工具或生成资产，应分别完成：
+
+1. 上游 source code license 审计。
+2. checkpoint / model license 审计。
+3. 训练与评测 dataset license 审计。
+4. 生成 output 的使用与再分发条款确认。
+5. 移植 UI 或第三方组件的版权头、NOTICE 与修改说明。

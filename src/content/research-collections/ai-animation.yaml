@@ -1,0 +1,10 @@
+title: AI Animation
+description: Evidence archives spanning motion generation, in-betweening, retrieval, constraints, and Unreal Engine runtime integration.
+eyebrow: First evidence archive
+status: active
+topics:
+  - motion-generation
+  - unreal-engine
+  - runtime-inference
+featured: true
+order: 10

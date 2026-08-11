@@ -1,0 +1,31 @@
+---
+import { getCollection } from "astro:content";
+import ArticleCard from "../../components/ArticleCard.astro";
+import PageHeader from "../../components/PageHeader.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { isPublished, sortByPublishedDate } from "../../utils/content";
+
+const entries = sortByPublishedDate(
+  await getCollection("case-studies", isPublished),
+);
+---
+
+<BaseLayout title="Work" description="Outcome-oriented case studies with explicit evidence, engineering trade-offs, failures, and unproven boundaries.">
+  <PageHeader
+    eyebrow="Outcome-oriented records"
+    title="Work"
+    description="Case studies that keep the problem, conditions, engineering decisions, failures, and verification boundary visible."
+    count={entries.length}
+  />
+  <section class="shell section-space" aria-label="Case studies">
+    {
+      entries.length > 0 ? (
+        <div class="article-index archive-index">
+          {entries.map((entry, index) => <ArticleCard entry={entry} order={index + 1} />)}
+        </div>
+      ) : (
+        <div class="empty-state"><h2>No published case studies yet</h2><p>Reviewed records will appear here.</p></div>
+      )
+    }
+  </section>
+</BaseLayout>

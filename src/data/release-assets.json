@@ -1,0 +1,10 @@
+{
+  "portrait": {
+    "src": "/images/profile/che-percy-liu-900.webp",
+    "srcset": "/images/profile/che-percy-liu-480.webp 480w, /images/profile/che-percy-liu-900.webp 900w",
+    "alt": "Portrait of Che (Percy) Liu working at a computer in a study space.",
+    "width": 900,
+    "height": 852
+  },
+  "cvUrl": "/cv/che-percy-liu-cv.pdf"
+}

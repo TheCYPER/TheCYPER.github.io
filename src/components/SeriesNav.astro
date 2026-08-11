@@ -1,0 +1,36 @@
+---
+import type { LongformEntry } from "../utils/content";
+import { contentHref } from "../utils/content";
+
+interface Props {
+  entry: LongformEntry;
+  entries: LongformEntry[];
+}
+
+const { entry, entries } = Astro.props;
+const ordered = [...entries]
+  .filter(({ data }) => data.series?.id === entry.data.series?.id)
+  .sort((left, right) => left.data.series!.order - right.data.series!.order);
+const currentIndex = ordered.findIndex(
+  (candidate) => candidate.id === entry.id && candidate.collection === entry.collection,
+);
+const previous = currentIndex > 0 ? ordered[currentIndex - 1] : undefined;
+const next = currentIndex >= 0 ? ordered[currentIndex + 1] : undefined;
+const label = entry.data.series?.id === "kimodo-research-program" ? "KIMODO Research Program" : "Research series";
+---
+
+{entry.data.series && (
+  <nav class="series-nav" aria-label={`${label} navigation`} lang="en">
+    <div class="series-nav__heading">
+      <p class="eyebrow">Series</p>
+      <h2>{label}</h2>
+      <p>Part {entry.data.series.order}. Only reviewed, published parts are linked.</p>
+    </div>
+    {(previous || next) && (
+      <div class="series-nav__links">
+        {previous && <a href={contentHref(previous)}><span>Previous</span><strong lang={previous.data.language}>{previous.data.title}</strong></a>}
+        {next && <a href={contentHref(next)}><span>Next</span><strong lang={next.data.language}>{next.data.title}</strong></a>}
+      </div>
+    )}
+  </nav>
+)}

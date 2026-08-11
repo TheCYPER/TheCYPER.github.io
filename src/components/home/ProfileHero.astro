@@ -1,0 +1,69 @@
+---
+import type { ProfileData } from "../../data/profile";
+
+interface Props {
+  profile: ProfileData;
+}
+
+const { profile } = Astro.props;
+---
+
+<section class:list={["profile-hero shell", { "profile-hero--with-portrait": profile.portrait }]} aria-labelledby="profile-name">
+  <div class="profile-hero__intro">
+    <p class="eyebrow">{profile.pronouns} · @{profile.handle}</p>
+    <h1 id="profile-name">{profile.name}</h1>
+    <p class="profile-hero__identity">{profile.identityLine}</p>
+    <p class="profile-hero__affiliation">
+      {profile.affiliation} <span aria-hidden="true">·</span> {profile.locations.join(" / ")}
+    </p>
+  </div>
+
+  <figure class="profile-hero__visual" aria-labelledby="research-field-caption">
+    <picture>
+      <source
+        srcset="/images/home/research-field-480.webp 480w, /images/home/research-field-900.webp 900w"
+        sizes="(max-width: 832px) calc(100vw - 40px), 460px"
+        type="image/webp"
+      />
+      <img
+        src="/images/home/research-field-900.webp"
+        alt="Abstract screenprint collage of motion paths, connected nodes, and layered research windows in indigo, yellow, teal, and violet."
+        width="900"
+        height="1125"
+        decoding="async"
+        fetchpriority="high"
+      />
+    </picture>
+
+    <figcaption id="research-field-caption">
+      <span>Research field / 2026</span>
+      <span>Agents · motion · systems</span>
+    </figcaption>
+
+    <span class="profile-hero__registration profile-hero__registration--yellow" aria-hidden="true"></span>
+    <span class="profile-hero__registration profile-hero__registration--teal" aria-hidden="true"></span>
+
+    {profile.portrait && (
+      <div class="profile-hero__portrait-window">
+        <img
+          src={profile.portrait.src}
+          srcset={profile.portrait.srcset}
+          alt={profile.portrait.alt}
+          width={profile.portrait.width}
+          height={profile.portrait.height}
+          decoding="async"
+        />
+      </div>
+    )}
+  </figure>
+
+  <div class="profile-hero__details">
+    <p class="profile-hero__bio">{profile.bio}</p>
+    <p class="profile-hero__availability">{profile.availability}</p>
+    <nav class="profile-links" aria-label="Primary profile links">
+      <a href={profile.links.github} target="_blank" rel="noreferrer">GitHub ↗</a>
+      {profile.cvUrl && <a href={profile.cvUrl}>CV</a>}
+      <a href={`mailto:${profile.links.email}`}>Email ↗</a>
+    </nav>
+  </div>
+</section>

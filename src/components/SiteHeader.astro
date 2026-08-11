@@ -1,0 +1,50 @@
+---
+import { navigation } from "../config/site";
+import { profile } from "../data/profile";
+
+const pathname = Astro.url.pathname;
+const items = [
+  ...navigation,
+  ...(profile.cvUrl ? [{ href: profile.cvUrl, label: "CV" }] : []),
+];
+const isCurrent = (href: string) =>
+  href === "/" ? pathname === "/" : href.startsWith("/") && pathname.startsWith(href);
+---
+
+<header class="site-header" lang="en">
+  <div class="site-header__inner shell">
+    <a class="wordmark" href="/" aria-label={`${profile.name} home`}>
+      <span class="wordmark__mark" aria-hidden="true">CL</span>
+      <span class="wordmark__text">
+        <strong>{profile.shortName}</strong>
+        <small>research notes</small>
+      </span>
+    </a>
+
+    <nav class="desktop-nav" aria-label="Primary navigation">
+      {
+        items.map((item) => (
+          <a href={item.href} aria-current={isCurrent(item.href) ? "page" : undefined}>
+            {item.label}
+          </a>
+        ))
+      }
+    </nav>
+
+    <details class="mobile-nav">
+      <summary aria-label="Open navigation menu">
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+      </summary>
+      <nav aria-label="Mobile navigation">
+        {
+          items.map((item) => (
+            <a href={item.href} aria-current={isCurrent(item.href) ? "page" : undefined}>
+              {item.label}
+            </a>
+          ))
+        }
+      </nav>
+    </details>
+  </div>
+</header>

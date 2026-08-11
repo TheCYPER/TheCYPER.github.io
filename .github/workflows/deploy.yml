@@ -1,0 +1,90 @@
+name: Deploy to GitHub Pages
+
+on:
+  workflow_dispatch:
+    inputs:
+      manual_release_gates:
+        description: Confirm rights review and final desktop/mobile approval are complete
+        required: true
+        type: boolean
+        default: false
+      cv_manual_reviewed:
+        description: Confirm a manual CV text and metadata review only if automatic PDF extraction cannot run
+        required: true
+        type: boolean
+        default: false
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  release-artifact:
+    name: Validate release artifact
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Pin npm from packageManager
+        run: |
+          corepack enable
+          corepack install --global npm@12.0.1
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Confirm manual release gates
+        env:
+          RELEASE_GATES_CONFIRMED: ${{ inputs.manual_release_gates }}
+        run: |
+          if [ "$RELEASE_GATES_CONFIRMED" != "true" ]; then
+            echo "Release blocked: rights review and final visual approval must be confirmed."
+            exit 1
+          fi
+
+      - name: Verify required release assets
+        run: npm run check:release
+
+      - name: Generate Open Graph artwork
+        run: npm run generate:og
+
+      - name: Validate source and the exact static output to deploy
+        env:
+          CV_MANUAL_REVIEWED: ${{ inputs.cv_manual_reviewed }}
+        run: npm run validate
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload validated Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    name: Deploy
+    needs: release-artifact
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

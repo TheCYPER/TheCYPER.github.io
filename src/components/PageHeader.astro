@@ -1,0 +1,21 @@
+---
+interface Props {
+  eyebrow: string;
+  title: string;
+  description: string;
+  count?: number;
+}
+
+const { eyebrow, title, description, count } = Astro.props;
+---
+
+<header class="page-header shell section-space">
+  <p class="eyebrow">{eyebrow}</p>
+  <div class="page-header__grid">
+    <h1>{title}</h1>
+    <div>
+      <p class="page-header__description">{description}</p>
+      {typeof count === "number" && <p class="page-header__count">{String(count).padStart(2, "0")} records</p>}
+    </div>
+  </div>
+</header>

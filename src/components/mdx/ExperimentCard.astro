@@ -1,0 +1,39 @@
+---
+interface Props {
+  period: string;
+  software: string[];
+  hardware?: string[];
+  conditions?: string[];
+  title?: string;
+}
+
+const {
+  period,
+  software,
+  hardware = [],
+  conditions = [],
+  title = "实验环境",
+} = Astro.props;
+
+const rows = [
+  ["Period", period],
+  ["Software", software.join(" · ")],
+  ...(hardware.length > 0 ? [["Hardware", hardware.join(" · ")]] : []),
+  ...(conditions.length > 0 ? [["Conditions", conditions.join(" · ")]] : []),
+];
+---
+
+<aside class="experiment-card" aria-label={title}>
+  <p class="experiment-card__label">Experiment record</p>
+  <h2>{title}</h2>
+  <dl>
+    {
+      rows.map(([term, value]) => (
+        <div>
+          <dt>{term}</dt>
+          <dd>{value}</dd>
+        </div>
+      ))
+    }
+  </dl>
+</aside>

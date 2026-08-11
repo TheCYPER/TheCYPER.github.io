@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+  <title id="title">AI animation system selection map</title>
+  <desc id="desc">A flow from four animation tasks through their typical motion sources into shared constraints, delivery, and evidence.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#6c6788"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#1e173f" flood-opacity="0.12"/>
+    </filter>
+    <style>
+      .label{font:700 22px system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.12em;fill:#625d78}
+      .title{font:700 30px system-ui,-apple-system,"Segoe UI",sans-serif;fill:#201a3e}
+      .detail{font:500 21px system-ui,-apple-system,"Segoe UI",sans-serif;fill:#514c66}
+      .inverse{fill:#fff}
+      .line{fill:none;stroke:#6c6788;stroke-width:4;marker-end:url(#arrow)}
+      .merge{fill:none;stroke:#aaa5ba;stroke-width:3}
+    </style>
+  </defs>
+  <rect width="1600" height="1000" rx="36" fill="#fbfaf6"/>
+  <text x="90" y="68" class="label">1 · START WITH THE JOB</text>
+  <rect x="90" y="92" width="1420" height="94" rx="26" fill="#2e259c" filter="url(#shadow)"/>
+  <text x="800" y="150" text-anchor="middle" class="title inverse">What must the animation system do?</text>
+
+  <path class="line" d="M800 186 V220 H250 V258"/>
+  <path class="line" d="M800 186 V220 H610 V258"/>
+  <path class="line" d="M800 186 V220 H990 V258"/>
+  <path class="line" d="M800 186 V220 H1350 V258"/>
+
+  <text x="90" y="246" class="label">2 · TASK</text>
+  <g filter="url(#shadow)">
+    <rect x="90" y="270" width="320" height="112" rx="24" fill="#ffd04f"/>
+    <rect x="450" y="270" width="320" height="112" rx="24" fill="#efe7ff" stroke="#924eb3" stroke-width="3"/>
+    <rect x="830" y="270" width="320" height="112" rx="24" fill="#def7ef" stroke="#02ad8d" stroke-width="3"/>
+    <rect x="1190" y="270" width="320" height="112" rx="24" fill="#e7e5ff" stroke="#2e259c" stroke-width="3"/>
+  </g>
+  <text x="250" y="324" text-anchor="middle" class="title">Retrieval</text>
+  <text x="250" y="357" text-anchor="middle" class="detail">find existing motion</text>
+  <text x="610" y="324" text-anchor="middle" class="title">In-betweening</text>
+  <text x="610" y="357" text-anchor="middle" class="detail">fill sparse poses</text>
+  <text x="990" y="324" text-anchor="middle" class="title">Offline generation</text>
+  <text x="990" y="357" text-anchor="middle" class="detail">author new clips</text>
+  <text x="1350" y="324" text-anchor="middle" class="title">Runtime control</text>
+  <text x="1350" y="357" text-anchor="middle" class="detail">respond every frame</text>
+
+  <text x="90" y="442" class="label">3 · TYPICAL MOTION SOURCE</text>
+  <path class="line" d="M250 382 V466"/>
+  <path class="line" d="M610 382 V466"/>
+  <path class="line" d="M990 382 V466"/>
+  <path class="line" d="M1350 382 V466"/>
+  <g filter="url(#shadow)">
+    <rect x="90" y="478" width="320" height="104" rx="22" fill="#fff" stroke="#d6cfad" stroke-width="3"/>
+    <rect x="450" y="478" width="320" height="104" rx="22" fill="#fff" stroke="#cdb7df" stroke-width="3"/>
+    <rect x="830" y="478" width="320" height="104" rx="22" fill="#fff" stroke="#9edbc9" stroke-width="3"/>
+    <rect x="1190" y="478" width="320" height="104" rx="22" fill="#fff" stroke="#aaa4e1" stroke-width="3"/>
+  </g>
+  <text x="250" y="525" text-anchor="middle" class="title">Database</text>
+  <text x="250" y="557" text-anchor="middle" class="detail">Pose Search</text>
+  <text x="610" y="525" text-anchor="middle" class="title">Temporal model</text>
+  <text x="610" y="557" text-anchor="middle" class="detail">RNN · Transformer</text>
+  <text x="990" y="525" text-anchor="middle" class="title">Generative model</text>
+  <text x="990" y="557" text-anchor="middle" class="detail">Diffusion · Flow · Tokens</text>
+  <text x="1350" y="525" text-anchor="middle" class="title">Controller</text>
+  <text x="1350" y="557" text-anchor="middle" class="detail">Phase · MoE · RL</text>
+
+  <path class="merge" d="M250 582 V624 H800"/>
+  <path class="merge" d="M610 582 V624 H800"/>
+  <path class="merge" d="M990 582 V624 H800"/>
+  <path class="merge" d="M1350 582 V624 H800"/>
+  <path class="line" d="M800 624 V656"/>
+
+  <text x="90" y="646" class="label">4 · SHARED CONTROL AND DELIVERY</text>
+  <g filter="url(#shadow)">
+    <rect x="250" y="670" width="1100" height="86" rx="24" fill="#02ad8d"/>
+    <rect x="250" y="790" width="1100" height="86" rx="24" fill="#924eb3"/>
+    <rect x="250" y="910" width="1100" height="70" rx="22" fill="#2e259c"/>
+  </g>
+  <text x="800" y="724" text-anchor="middle" class="title inverse">Constraints · trajectory · keyframe · contact · scene · physics</text>
+  <path class="line" d="M800 756 V786"/>
+  <text x="800" y="844" text-anchor="middle" class="title inverse">Retarget · IK · engine runtime · human review</text>
+  <path class="line" d="M800 876 V906"/>
+  <text x="800" y="955" text-anchor="middle" class="title inverse">Evidence: baselines · metrics · failure cases</text>
+</svg>

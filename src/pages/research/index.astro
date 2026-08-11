@@ -1,0 +1,67 @@
+---
+import { getCollection } from "astro:content";
+import CurrentQuestions from "../../components/home/CurrentQuestions.astro";
+import PageHeader from "../../components/PageHeader.astro";
+import ResearchTrack from "../../components/ResearchTrack.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import "../../styles/home.css";
+import { isPublished } from "../../utils/content";
+
+const [tracks, questions, caseStudies, articles] = await Promise.all([
+  getCollection("research-collections"),
+  getCollection("research-questions"),
+  getCollection("case-studies", isPublished),
+  getCollection("articles", isPublished),
+]);
+const allContent = [...caseStudies, ...articles];
+const orderedTracks = [...tracks].sort((left, right) => right.data.order - left.data.order);
+const currentQuestions = questions
+  .filter(({ data }) => data.status === "active")
+  .sort((left, right) => left.data.order - right.data.order);
+const futureQuestions = questions
+  .filter(({ data }) => data.status === "future")
+  .sort((left, right) => left.data.order - right.data.order);
+---
+
+<BaseLayout title="Research" description="Current research questions and evidence archives across agents, motion, robotics, and agent-native systems.">
+  <PageHeader
+    eyebrow="Questions before claims"
+    title="Research"
+    description="Open questions stay separate from completed evidence. They become links only when there is enough work to inspect."
+    count={questions.length}
+  />
+
+  <div class="research-questions shell">
+    <CurrentQuestions
+      questions={currentQuestions}
+      eyebrow="In active investigation"
+      heading="Current questions"
+      id="research-current-heading"
+    />
+    <CurrentQuestions
+      questions={futureQuestions}
+      eyebrow="Directions worth testing"
+      heading="Future questions"
+      id="research-future-heading"
+    />
+  </div>
+
+  <section class="shell section-space" aria-labelledby="evidence-archives-heading">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">Completed and bounded records</p>
+        <h2 id="evidence-archives-heading">Evidence archives</h2>
+      </div>
+    </div>
+    <div class="track-index">
+      {
+        orderedTracks.map((track) => (
+          <ResearchTrack
+            track={track}
+            count={allContent.filter(({ data }) => data.collection === track.id).length}
+          />
+        ))
+      }
+    </div>
+  </section>
+</BaseLayout>

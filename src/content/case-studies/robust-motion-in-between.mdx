@@ -1,0 +1,228 @@
+---
+title: "Robust Motion In-Between：从可复现基准到 UE 5.8 Runtime"
+description: "一次有边界的 RMIB 复现：先在 LAFAN1 上完成 M6、单步 ONNX 与 NNE 对拍，再转向独立的 Manny-native 流式推理与 bake 路径。"
+publishedAt: 2026-07-06
+draft: false
+publicationState: approved-for-publication
+language: zh-CN
+collection: ai-animation
+topics:
+  - motion-in-betweening
+  - unreal-engine
+  - onnx
+  - character-animation
+featured: true
+experiment:
+  period: "2026-06-24 — 2026-07-06"
+  software:
+    - PyTorch
+    - ONNX Runtime
+    - Unreal Engine 5.8
+    - Neural Network Engine (NNE)
+  hardware:
+    - NVIDIA RTX 5060 Ti（训练）
+    - CPU 型号未在公开记录中保留；0.92 ms 仅作原环境快照
+verification:
+  verified:
+    - "在 LAFAN1 subject 5 的 2,232 个测试窗口上完成受控 benchmark"
+    - "M6 在 5、15、30、45 帧设置的 L2P 上均优于 interpolation baseline"
+    - "单步 ONNX 与 PyTorch 自回归 rollout 对拍误差低于 1e-4"
+    - "Windows CPU 快照中，batch 1 单步推理为 0.92 ms"
+    - "LAFAN1/M6 的 UE 5.8 NNE 对拍分别得到 max|dQuat|=2.38e-7 与 max|dRoot|=1.07e-5"
+    - "后续独立 Manny-native 模型完成逐 tick streaming，并实际执行 15-frame AnimSequence bake；30/45 frames 只由同一入口支持，未记录为已执行"
+  notVerified:
+    - "任意 Anim A 到任意 Anim B 的 production-grade 自然过渡"
+    - "跨角色、跨骨架与大规模动作库上的泛化质量"
+    - "与 UE inertialization、blend 或 montage 的系统性主观盲测"
+    - "LAFAN1/M6 benchmark 指标可以直接代表后续 Manny-native 模型的质量"
+licenses:
+  - asset: LAFAN1 dataset and upstream loader
+    status: linked-only
+    note: "上游仓库标注 CC BY-NC-ND 4.0；本文不再分发数据、loader 修改版、模型或原始动作文件。"
+  - asset: "选定的本地 LAFAN1 评测预览"
+    status: permitted
+    note: "Percy 已确认可在本作品集发布；该许可不改变 LAFAN1 上游条款，也不授权再分发数据集、模型或源动作。"
+problem: "验证一个研究级 motion in-betweening 方法，能否被拆成可测、可导出、可进入 Unreal Engine 的工程链路，同时避免把同序列实验误写成任意动作过渡。"
+role: "独立研究、模型复现、benchmark、部署与 UE 集成"
+duration: "约两周，从基准复现到 UE AnimSequence bake"
+stack:
+  - Python
+  - PyTorch
+  - ONNX
+  - ONNX Runtime
+  - Unreal Engine 5.8
+  - NNE
+  - C++
+outcomes:
+  - "建立 FK、baseline、模型、指标与可视化的可复现竖切"
+  - "选出 M6 作为评估范围内的最佳模型，并记录 M8 6D 表示的负结果"
+  - "在 LAFAN1/M6 路径中将自回归循环拆成单步 ONNX，完成 PyTorch/ORT/UE 三端数值对拍"
+  - "确认 Retarget 的工程边界后转向独立 Manny-native 数据与模型，打通实时 streaming 和常规 AnimSequence bake"
+---
+
+import { Callout, ClaimBoundary, ExperimentCard, Figure } from "../../components/mdx";
+
+很多 motion in-betweening 演示看起来像同一件事：给一段开头、一个目标姿势，让模型补出中间帧。但真正进入工程后，问题会迅速分裂：前向运动学有没有算对？模型是否真的优于插值？导出后有没有数值漂移？在 Unreal Engine 里看到的动作，究竟来自实时推理、预先烘焙，还是 Retarget 的视觉修正？
+
+如果需要先区分 In-betweening、Offline Generation 与 Runtime Control，可以从 [AI 动画技术版图](/writing/ai-animation-technology-map/) 开始；本文只展开其中一条从论文到引擎的纵向链路。
+
+这次工作的目标不是复刻一支漂亮视频，而是建立一条可以逐层证伪的链路：
+
+```text
+LAFAN1 benchmark → M6 / ablations → single-step ONNX → UE NNE parity → Manny Retarget
+                                                                        │
+                                                                        └─ 暴露骨架域差异
+Manny AnimSequence data → separate Manny-native model → UE streaming → AnimSequence bake
+```
+
+这里存在一次明确的工程 pivot：前半段的 M6 指标、ONNX 对拍和 NNE parity 属于 LAFAN1
+22-joint 模型；最终 bake 使用的是后来单独训练的 Manny-native ONNX。两条路径共享部署方法，
+但不能用 M6 的 benchmark 数字替 Manny-native 模型背书。
+
+<ExperimentCard
+  period="2026-06-24 — 2026-07-06"
+  software={["PyTorch", "ONNX Runtime", "Unreal Engine 5.8", "NNE"]}
+  hardware={[
+    "NVIDIA RTX 5060 Ti（训练）",
+    "CPU 型号未在公开记录中保留；0.92 ms 仅作原环境快照",
+  ]}
+  conditions={[
+    "LAFAN1：22 joints，30 FPS",
+    "测试集：subject 5，共 2,232 个窗口",
+    "ONNX 延迟为单机 CPU Execution Provider 快照，不是跨设备承诺",
+  ]}
+  title="实验快照"
+/>
+
+<ClaimBoundary
+  verified={[
+    "同一数据协议下的 LAFAN1 window rollout 与 interpolation 对比",
+    "M6 单步 ONNX 的数值等价性与 CPU 延迟快照",
+    "LAFAN1/M6 的 UE NNE 推理与 Retarget，以及后续独立 Manny-native 模型的 streaming 和 bake 路径",
+  ]}
+  notVerified={[
+    "来自任意两个独立 AnimSequence 的自然、production-grade Anim A→B 过渡",
+    "模型已经可以替代 UE blend、inertialization 或动画师修整",
+    "LAFAN1 上的分数可以直接外推到项目角色与项目动作库",
+    "M6 benchmark 指标可以直接外推到后续 Manny-native 模型",
+  ]}
+/>
+
+## 先把任务缩到能够证明
+
+上游 [Robust Motion In-Betweening](https://montreal.ubisoft.com/en/automatic-in-betweening-for-faster-animation-authoring/) 以稀疏边界条件生成过渡动作；配套的 [LAFAN1 repository](https://github.com/ubisoft/ubisoft-laforge-animation-dataset) 提供数据、interpolation / zero-velocity baseline 与 L2P、L2Q、NPSS 评估协议。
+
+我先沿用这个封闭协议，而没有直接从“任意两个游戏动作之间过渡”开始。训练使用 subject 1–4，测试使用 subject 5；测试窗口仍来自连续捕捉序列。这样能回答模型、指标和部署是否正确，却还不能回答两个语义、速度和接触状态完全不同的独立动作能否自然衔接。
+
+这个 scope 看起来保守，但它让每一步都有对照：
+
+1. 用官方逻辑重现 SLERP / interpolation 数字。
+2. 在训练模型前，让 PyTorch FK 与独立 NumPy oracle 对拍到 `<1e-3`。
+3. 分别观察姿态、节奏和脚部，而不是只挑一段最好看的动画。
+4. 任何部署端都要和已经验证的 PyTorch 路径逐元素比较。
+
+<Callout type="takeaway" title="先证明坐标与评估，再讨论模型">
+  骨架层级、四元数约定或 FK 只要有一处错，loss、可视化和 UE 结果可能同时“看起来能动”，却共同建立在错误坐标上。这里最重要的早期产物不是网络，而是会主动失败的数学门禁。
+</Callout>
+
+## 从最小模型迭代到 M6
+
+复现不是一次性照抄完整论文。我把能力拆成一系列可比较的里程碑：最小 recurrent 模型、容量提升、contact prediction、两骨 IK、contact feedback，再到 gentle adversarial fine-tuning。
+
+最终采用的 M6 从 M5 warm-start，并加入两个观察全局关节位置与速度的 LSGAN discriminator。它是 **LAFAN1 评估序列中的最佳模型**，不是后来所有实验编号里数字最大的模型，也不是后续 Manny-native bake 使用的模型。
+
+| Transition length | M6 L2P | Interpolation L2P | 结果 |
+|---:|---:|---:|---|
+| 5 | 0.325 | 0.373 | M6 更低 |
+| 15 | 0.806 | 1.249 | M6 更低 |
+| 30 | 1.510 | 2.316 | M6 更低 |
+| 45 | 2.351 | 3.447 | M6 更低 |
+
+L2P 是归一化后的全局位置误差，并不是厘米。M6 同时改善了 L2Q 与 NPSS；在 30 / 45 帧设置下，无 IK 的 foot-skate 为 7.803 / 10.347 mm per frame，预测 contact 驱动 IK 后降到 6.221 / 9.091。这里仍应把“模型本体”“contact classifier”和“IK 后处理”分开看，不能把最终视觉效果全部归功于生成网络。
+
+## M8：一个值得保留的失败实验
+
+M8 把网络输出的旋转增量改为连续 6D 表示，并用精确四元数乘法复合。理论上，6D 表示可以避免绝对大旋转回归中的不连续；但这个模型预测的是 30 FPS 下、单位旋转附近的微小残差。
+
+结果很干净：与同配置的 M5 相比，M8 的 L2P、L2Q、NPSS 在所有测试长度上都略差，45 帧的 NPSS 退化最明显。因此 6D 路径没有成为主模型，部署继续选择 M6。
+
+但它也留下一个有价值的副发现：精确 rotation composition 将 30 / 45 帧脚滑降低约 26–34%。这说明“6D 表示不适合当前任务”和“旋转复合方式值得继续研究”可以同时成立。
+
+<Callout type="failure" title="失败不是把实验编号删掉">
+  只有实现对拍、训练配置和评估协议保持一致，负结果才有解释力。M8 被保留为一个受控 ablation，而不是被包装成“更现代的表示所以一定更好”。
+</Callout>
+
+## 为什么只导出单步 ONNX
+
+模型的 rollout 是一个动态长度的自回归循环：当前 pose、LSTM hidden/cell state 与 time-to-arrival encoding 共同产生下一帧，再把结果喂回模型。把整个 Python 循环冻结进一张静态图，会让动态长度和宿主控制变得脆弱。
+
+部署因此采用更小的契约：
+
+```text
+(current pose, target, h, c, z_tta)
+                ↓
+        one ONNX inference
+                ↓
+(next pose, contact, next h, next c)
+```
+
+循环留给宿主。相同宿主循环分别驱动 PyTorch 与 ONNX Runtime，45 帧自回归对拍得到：
+
+- `max |Δquat| = 1.25e-6`
+- `max |Δroot| = 2.29e-5`
+- 总体门槛 `<1e-4`
+
+在当时的原生 Windows 环境中，ONNX Runtime CPU Execution Provider 的 batch 1 单步均值为 **0.92 ms**，约占 30 FPS 单帧预算的 2.8%。这是一次特定机器、版本与输入规模的 benchmark snapshot；它证明当前链路具备实时余量，不代表所有 CPU、所有角色数都能复现相同数字。有关运行时能力可参考 [ONNX Runtime documentation](https://onnxruntime.ai/docs/)。
+
+<Figure
+  src="/media/articles/robust-motion-in-between/m6-onnx-ground-truth-comparison.gif"
+  reducedMotionSrc="/media/articles/robust-motion-in-between/m6-onnx-ground-truth-comparison-first-frame.png"
+  alt="Side-by-side skeletal motion preview comparing a ground-truth LAFAN1 window with the M6 ONNX rollout"
+  caption="一个 subject-5 window 的 Ground Truth 与 M6 ONNX prediction，由 torch-free 部署管线渲染。它只提供定性检查；数值对拍与 2,232-window benchmark 才承担主要结论。"
+  width={1000}
+  height={500}
+  credit="Percy Liu，scoped RMIB reproduction"
+  license="作品集发布许可已确认；LAFAN1 上游条款保持独立"
+  wide
+/>
+
+## 进入 UE：两条模型路径、四层证据
+
+UE 侧集成使用 5.8 的 Neural Network Engine；Epic 的 [NNE 官方课程入口](https://forums.unrealengine.com/t/course-neural-network-engine-nne/1162628) 介绍了它在引擎内加载模型并执行 inference 的基本定位。我把“在 UE 里跑起来”继续拆成四层。前两层验证 LAFAN1/M6 的部署与 Retarget；它暴露骨架域差异后，后两层转向单独训练的 Manny-native 模型。
+
+### 1. NNE 数值对拍
+
+相同输入由 UE 内置 ORT 与 Python ONNX Runtime 执行；对拍记录为 `max |dQuat| = 2.38e-7`、`max |dRoot| = 1.07e-5`，整体低于 `1e-4` 验收线。这一层只证明 inference contract，没有涉及角色表现。
+
+### 2. LAFAN1 到 Manny 的坐标与 Retarget
+
+模型输出 22-joint LAFAN1 skeleton；Manny 有不同 rest pose、骨骼比例、spine 数量以及额外 twist / finger / IK bones。技术验证使用 IK Retargeter，把缺失链明确留空，并单独对齐 Retarget Pose。
+
+这条桥能证明动作可进入 UE，但额外的 skeleton mapping 与 pose correction 也会引入误差。因此 production 方向应使用目标骨架原生数据，而不是永远把 22-joint 数据 Retarget 到所有角色。
+
+### 3. 逐 tick streaming
+
+第一版 LAFAN1→Manny runtime 是“首次生成完整段，再回放数组”：推理是真的，但交互意义上的实时性有限。确认 Retarget 边界后，后续 Manny-native runtime 改为每个固定步执行一次独立模型的 ONNX inference，持续传递 `h/c`，并在运行时切换目标姿势。这样看到的是宿主驱动的单步生成，而不是预先烘焙视频。
+
+### 4. Bake 为常规 AnimSequence
+
+最后用 Manny-native ONNX、10 帧 seed、**15 帧生成过渡**和目标帧完成一次普通 `AnimSequence` smoke test。相同 bake 入口支持 30 / 45 帧比较，但现有记录只证明 15 帧已经实际执行，不能把建议命令写成完成证据。资产化后，结果可以被检查、复用，并进入和 UE blend / inertialization 相同的播放与比较流程；这一结果不继承前文 M6 的 LAFAN1 指标。
+
+<Callout type="warning" title="Streaming demo 不是任意动作过渡的验收">
+  运行时切换目标证明了单步状态管理、NNE 推理和角色驱动链路。目标仍来自受控数据窗口；它没有完成固定的 run→turn、run→stop、walk→sprint 跨 clip benchmark，也没有与 UE 原生过渡做系统盲测。
+</Callout>
+
+## 真正留下来的工程方法
+
+这次工作最有价值的不是某个单点分数，而是一套从研究代码走向引擎时仍能保持诚实的验证顺序：
+
+- **先固定 oracle 与 baseline**：坐标不可信时，不训练更大的模型。
+- **把模型与后处理分账**：contact、IK、Retarget 都要单独报告。
+- **部署先做 numerical parity**：视觉相似不能替代逐元素对拍。
+- **把 latency 写成 snapshot**：记录 provider、batch 和环境，不把一次数字变成硬件承诺。
+- **让失败实验可复查**：M8 没有上线，但改变了后续旋转复合研究的方向。
+- **把最终目标和当前证据分开**：任意 Anim A→B 是下一阶段的数据与评估问题，不是改一句文案就能得到的能力。
+
+## 数据与许可边界
+
+LAFAN1 的上游 repository 将数据与配套代码标为 **CC BY-NC-ND 4.0**。本项目只在非商业研究范围内使用；本文仅展示上方一段经确认可在本作品集发布的本地比较预览，不分发 BVH、修改后的 loader、模型权重或源动作。该发布许可不改变上游条款。若要进入可商用产品，必须更换为许可兼容的数据，或取得独立授权并重新验证完整链路。

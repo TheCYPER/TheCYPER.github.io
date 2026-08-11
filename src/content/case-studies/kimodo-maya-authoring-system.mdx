@@ -1,0 +1,202 @@
+---
+title: "把 KIMODO 带进 Maya：Constraint Timeline、四候选与 Active Motion"
+description: "一次 DCC-native motion authoring 系统的架构复盘：远程生成留在服务端，Prompt、Constraint、候选选择、canonical local quaternion 与导出闭环进入 Maya 2024。"
+publishedAt: 2026-07-31
+updatedAt: 2026-08-10
+draft: true
+publicationState: planned-after-claim-and-rights-review
+language: zh-CN
+series:
+  id: kimodo-research-program
+  order: 2
+collection: ai-animation
+topics:
+  - text-to-motion
+  - motion-authoring
+  - Maya
+  - constraints
+featured: false
+experiment:
+  period: "2026-07-28 — 2026-08-10"
+  software:
+    - NVIDIA KIMODO
+    - Autodesk Maya 2024
+    - Python / FastAPI
+    - QtWebEngine / TypeScript
+  hardware:
+    - 远程生成服务与本地 Maya 客户端；本文不公开部署拓扑，也不据此作性能承诺
+verification:
+  verified:
+    - "本地系统把远程 generation service 与 Maya 2024 client 串成 Prompt、Constraint、四候选、Active Motion 与 FBX export 闭环"
+    - "Constraint Timeline 以 Maya scene state 为真值，覆盖 Root、四肢 end-effector 与 FullBody authoring"
+    - "canonical SOMA77 local quaternion contract 取代了不安全的 FBX world-rotation copying"
+    - "0.5.3 留下 Maya 2024 QtWebEngine 双向 Bridge diagnostic；0.5.4 留下 automated coverage 与 archive hash"
+  notVerified:
+    - "0.5.4 进行了新增 Maya 2024 smoke test、动画师 pilot 或团队规模化采用"
+    - "项目角色 Retarget、HumanIK、Skeleton Mapping 或 UE 自动导入已经完成"
+    - "插件或服务端代码已经以 public repository 形式发布"
+    - "KIMODO 理解 Prop、碰撞、墙面语义或跨 Prompt 指代"
+licenses:
+  - asset: Article text and original text diagrams
+    status: owned
+  - asset: NVIDIA KIMODO source code
+    status: linked-only
+    note: "官方源码为 Apache-2.0；本文只链接上游，不分发源码。"
+  - asset: NVIDIA KIMODO model checkpoint
+    status: linked-only
+    note: "模型使用独立 NVIDIA model terms，不能从源码许可推导 checkpoint 权利。"
+  - asset: Maya plugin package, generated jobs and motion files
+    status: replaced
+    note: "本文只保留架构说明；不分发 release archive、内部截图、BVH、FBX 或生成任务产物。"
+problem: "让动画师不离开 Maya 就能表达 Prompt 与时空约束、比较生成候选并导出结果，同时把远程模型环境和内部部署细节留在服务边界之后。"
+role: "系统架构、Maya authoring workflow、Constraint Timeline、motion contract 与 release verification"
+duration: "约两周，从首个完整 authoring loop 到 0.5.4 compatibility update"
+stack:
+  - KIMODO
+  - Maya 2024
+  - Python
+  - FastAPI
+  - QtWebEngine
+  - TypeScript
+outcomes:
+  - "建立 Prompt / Constraint → remote generation → four-candidate review → Active Motion → export 的 Maya-native 闭环"
+  - "用 canonical SOMA77 local quaternion 消除 FBX world-rotation copying 的坐标与 pre-rotation 风险"
+  - "把候选比较、场景持久化、FullBody 编辑和 export 组织为明确状态转换"
+  - "保留版本级验证边界，没有把 release contract 写成 production-readiness 证据"
+---
+
+import { Callout, ClaimBoundary, ExperimentCard } from "../../components/mdx";
+
+[NVIDIA KIMODO](https://research.nvidia.com/labs/sil/projects/kimodo/) 的公开 Demo 已经把 Prompt、sparse spatial constraints 与 Best-of-N selection 放在同一个 authoring loop 里。真正落进 DCC 时，难点却不只是“加一个 Generate 按钮”：Timeline 的数据归谁、候选怎样成为可编辑动作、不同骨骼坐标约定如何过桥、异步任务失败后场景还能否恢复，都会决定工具是否可信。
+
+这篇 case study 只回答系统工程问题。模型在什么动作上有效、Prompt 和 Constraint 各自能做什么，见本系列第一篇 [KIMODO 能力边界评测](/work/kimodo-capability-boundaries/)。
+
+<ExperimentCard
+  period="2026-07-28 — 2026-08-10"
+  software={["NVIDIA KIMODO", "Autodesk Maya 2024", "Python / FastAPI", "QtWebEngine / TypeScript"]}
+  hardware={["远程生成服务与本地 Maya 客户端；不公开内部部署拓扑"]}
+  conditions={[
+    "固定 Maya 2024、SOMA77、30 FPS 与 centimeter authoring contract",
+    "四候选用于 Best-of-N 人工选择；Active Motion 不作为 motion-to-motion conditioning",
+    "本文不包含插件源码、内部截图、服务地址、Token、release archive 或动作媒体",
+  ]}
+  title="实现与核验范围"
+/>
+
+<ClaimBoundary
+  verified={[
+    "Prompt、Constraint、四候选、Active Motion 与 FBX export 的本地完整闭环",
+    "Maya scene state 与 Constraint Timeline 的双向同步",
+    "canonical SOMA77 local quaternion 的 authoring-motion contract",
+    "0.5.3 Maya diagnostic 与 0.5.4 automated/package contract 证据",
+  ]}
+  notVerified={[
+    "动画师 production pilot、团队规模化使用或项目角色交付",
+    "HumanIK、任意 Skeleton Mapping、项目角色 Retarget 或 UE 自动发布",
+    "0.5.4 重跑了 0.5.3 的 Maya 2024 interactive diagnostic",
+    "插件或服务已经公开发布",
+  ]}
+/>
+
+## 架构选择：DCC 负责创作状态，服务端负责生成环境
+
+模型、依赖和 GPU runtime 留在远程服务；Maya 只承载动画师需要直接操作的状态。公开层面的数据流可以压缩为：
+
+```text
+Maya Prompt + Constraint Timeline
+              │
+              ▼
+      remote generation service
+              │
+              ▼
+ four candidates + canonical authoring motion
+              │
+              ▼
+   choose one → Active Motion → export
+```
+
+这个边界有两个目的。第一，动画师不需要在工作站安装模型训练栈；第二，场景内的 Prompt、Locator、pose snapshot 与选中候选仍由 Maya 管理。网络任务可以异步排队、恢复或失败，但不能让 UI 在未知状态下继续提交第二个任务。
+
+界面因此围绕一个主状态机组织，而不是让多个 Tab 各自改变 scene：
+
+```text
+Ready → Generating → Choosing Candidate → Active Motion
+  ▲                                      │
+  └──────────── edit constraints ────────┘
+```
+
+## Constraint Timeline 不是装饰层
+
+Timeline 同时承载连续 Prompt 段、duration、Root path、左右手脚 end-effector 与 FullBody pose。关键决定是把 Maya scene data 作为 authoring 真值，而不是让嵌入式网页维护一份不可见的副本。
+
+- Root Locator 是路径数据；Curve 只是由 Locator 派生的显示。
+- Hand / foot / FullBody 保存的是明确帧上的 snapshot，不会随着 Control 后续移动而偷偷变化。
+- Timeline 拖动改变目标时间；只有显式“重新采样”才更新姿态内容。
+- 保存 scene 后，Prompt、约束、playhead、候选 lineage 与 Active Motion 状态可以一起恢复。
+
+FullBody 编辑尤其需要 transaction。进入编辑时先保存当前 authoring state；用户可以移动 Joint 或 IK Control，再显式 Save 或 Cancel。生成按钮在事务未结束时保持不可用，避免把半编辑姿态提交给远程任务。
+
+<Callout type="takeaway" title="可见状态比按钮数量更重要">
+  生成工具的危险状态通常不是模型报错，而是用户不知道当前操作会覆盖什么。把 editing、generating、choosing 与 active 明确分开后，异步任务和 Maya scene 才有可解释的恢复路径。
+</Callout>
+
+## 四候选之后，只保留一个 Active Motion
+
+每次生成返回四个候选。Maya 同时展示它们，让用户通过 Viewport mesh 或候选卡完成一次明确选择。被选动作成为唯一 Active Motion，场景中的其余候选 DAG 被移除；候选 lineage 仍被保留，必要时可以恢复比较，而不必重新运行模型。
+
+这里有一条容易被误解的边界：Active Motion 是观察、Constraint 捕获和迭代来源，**不是**下一轮 KIMODO 的 motion-to-motion conditioning。重新生成时传入的是当前 Prompt、duration 与显式 constraints；来源 Job/Candidate 只进入 lineage。
+
+## 为什么 FBX world rotation 不能当 authoring contract
+
+早期版本曾把候选 FBX 的 world rotation 复制到 Maya authoring rig。这个路径看似直接，实际把不同的 bone axis、rest basis 与 pre-rotation 当成了相同坐标系，结果可能是身体折叠、旋转失真，以及与 IK graph 相关的 bake 警告。
+
+最终方案让服务端为每个候选额外写出 canonical SOMA77 authoring motion：
+
+- 固定 Joint 顺序与 parent index；
+- Root 使用 centimeter translation；
+- 每帧使用 normalized local quaternion；
+- 附带 frame rate、coordinate-system version、Skeleton hash 与完整性校验；
+- 写出前用 forward reconstruction 检查 posed-joint error。
+
+Maya 校验 schema、hash、帧数与 quaternion 后，直接把 Root translation 和 77 个 Joint local rotations 写成 animation curves。这条路径不依赖 `parentConstraint`、`orientConstraint` 或 `bakeResults()`。没有 canonical authoring motion 的旧任务仍可预览和导出原始资产，但不能安全地成为可继续编辑的 Active Motion。
+
+<Callout type="finding" title="预览格式与编辑格式应该分开">
+  FBX 适合交换与交付，却不是无损的内部 authoring state。保留 canonical local rotations 作为编辑契约，再把验证过的候选 FBX 作为交付资产，能把坐标约定和 export 职责拆开。
+</Callout>
+
+## Export 是最后一步，不是自动完成项目角色落地
+
+导出会复制被选候选对应的、已经过 manifest 与 checksum 校验的原始 FBX，并允许用 Maya 原生保存流程命名。标准交付仍是 SOMA77 motion；项目角色的 Retarget、HumanIK、Skeleton Mapping、接触修整与 UE import 是下游任务，不属于本 case study 已验证的自动化范围。
+
+换句话说，这里完成的是：
+
+```text
+KIMODO → SOMA77 authoring / exchange asset → DCC handoff
+```
+
+而不是：
+
+```text
+KIMODO → arbitrary project character → production-ready UE animation
+```
+
+## Release evidence：0.5.3 与 0.5.4 证明的不是同一件事
+
+| 版本 | 已记录证据 | 不能据此声称 |
+|---|---|---|
+| 0.5.3 | Timeline typecheck/build、Python contract tests、完整 archive contract，以及 Maya 2024 QtWebEngine 双向 Bridge diagnostic | 动画师 pilot、团队采用、任意 Maya 环境兼容 |
+| 0.5.4 | 可选 authentication mode compatibility、相关 automated coverage、当前 release archive hash | 新一轮 Maya 2024 interactive smoke、production readiness |
+
+`0.5.4` 是当前 package，但它主要改变连接鉴权兼容性。最强的 Maya 2024 interactive diagnostic 仍来自 `0.5.3`。版本号更高不等于验证范围自动扩大，这也是本文把 release contract 与用户试点证据分开记录的原因。
+
+## 当前结论
+
+这套系统已经证明一个受限但完整的 DCC-native loop 可以工作：动画师在 Maya 表达 Prompt 与约束，远程服务生成四候选，canonical local quaternion 负责安全编辑，Active Motion 负责后续迭代，最终以经过验证的交换资产 handoff。
+
+它还没有证明团队级生产成熟度。下一阶段真正需要的不是继续增加按钮，而是动画师 pilot、项目角色 Retarget 验收、失败恢复演练，以及逐篇完成代码、模型、DCC 组件与生成输出的 rights review。在这些 gate 完成前，本文保持 draft。
+
+## 公开与许可边界
+
+本文只链接 [KIMODO 官方项目页](https://research.nvidia.com/labs/sil/projects/kimodo/)、[官方 Constraints 文档](https://research.nvidia.com/labs/sil/projects/kimodo/docs/key_concepts/constraints.html) 与 [source repository](https://github.com/nv-tlabs/kimodo)。KIMODO source 的 Apache-2.0、checkpoint 的 NVIDIA model terms、Maya/Qt 组件条款，以及生成输出权利必须分别审计。
+
+内部 host、port、Token、用户目录、凭据存储、deployment topology、release archive、任务产物、BVH、FBX 与 screenshot 都不在本文中分发。

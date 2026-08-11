@@ -1,0 +1,18 @@
+title: CreditSense
+description: A reproducible tabular-ML pipeline for jointly predicting credit-risk class and loan interest rate, with cross-validation, feature engineering, Optuna tuning, and model registries.
+url: https://github.com/TheCYPER/AI1215Final
+repoUrl: https://github.com/TheCYPER/AI1215Final
+stack:
+  - Python
+  - scikit-learn
+  - XGBoost
+  - LightGBM
+  - Optuna
+status: shipped
+draft: false
+featured: false
+year: 2026
+topics:
+  - Applied ML
+  - Tabular Learning
+  - Evaluation

@@ -1,0 +1,9 @@
+title: Real-time Music Accompaniment
+summary: Can groove and solo retrieval, combined with bounded generative variation, support a low-latency rhythm section for incomplete bands and solo practice?
+status: future
+homepage: false
+order: 6
+topics:
+  - music-ai
+  - retrieval
+  - real-time-systems

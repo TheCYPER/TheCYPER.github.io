@@ -1,0 +1,197 @@
+<div
+  class="page-transition-stage"
+  data-page-transition-stage
+  data-state="idle"
+  data-direction="forward"
+  transition:persist="page-transition-stage"
+  aria-hidden="true"
+>
+  <div class="page-transition-stage__wash"></div>
+  <div class="page-transition-stage__canvas">
+    <div class="page-transition-window page-transition-window--primary">
+      <span class="page-transition-window__chrome"><i></i><i></i><i></i></span>
+      <span class="page-transition-window__rules"><i></i><i></i><i></i></span>
+    </div>
+    <div class="page-transition-window page-transition-window--yellow">
+      <span class="page-transition-window__chrome"><i></i><i></i><i></i></span>
+      <span class="page-transition-window__rules"><i></i><i></i><i></i></span>
+    </div>
+    <div class="page-transition-window page-transition-window--teal">
+      <span class="page-transition-window__chrome"><i></i><i></i><i></i></span>
+      <span class="page-transition-window__rules"><i></i><i></i><i></i></span>
+    </div>
+    <div class="page-transition-window page-transition-window--violet">
+      <span class="page-transition-window__chrome"><i></i><i></i><i></i></span>
+      <span class="page-transition-window__rules"><i></i><i></i><i></i></span>
+    </div>
+  </div>
+</div>
+
+<script>
+  import type {
+    TransitionBeforePreparationEvent,
+    TransitionBeforeSwapEvent,
+  } from "astro:transitions/client";
+
+  declare global {
+    interface Window {
+      __percyPageTransitionDispose__?: () => void;
+    }
+  }
+
+  const COVER_DURATION_MS = 420;
+  const REVEAL_DURATION_MS = 520;
+  const MAX_COVER_HOLD_MS = 12_000;
+  const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  let runId = 0;
+  let revealRunId: number | null = null;
+  let revealTimer: number | null = null;
+  let safetyTimer: number | null = null;
+
+  const getStage = () => document.querySelector<HTMLElement>("[data-page-transition-stage]");
+
+  const clearTimer = (timer: number | null) => {
+    if (timer !== null) window.clearTimeout(timer);
+  };
+
+  const clearTimers = () => {
+    clearTimer(revealTimer);
+    clearTimer(safetyTimer);
+    revealTimer = null;
+    safetyTimer = null;
+  };
+
+  const setIdle = (expectedRunId?: number) => {
+    if (expectedRunId !== undefined && expectedRunId !== runId) return;
+    clearTimers();
+    revealRunId = null;
+    const stage = getStage();
+    if (stage) stage.dataset.state = "idle";
+  };
+
+  const waitFor = (duration: number, signal: AbortSignal) =>
+    new Promise<void>((resolve) => {
+      if (signal.aborted) {
+        resolve();
+        return;
+      }
+
+      let timer = 0;
+      const finish = () => {
+        window.clearTimeout(timer);
+        signal.removeEventListener("abort", finish);
+        resolve();
+      };
+
+      timer = window.setTimeout(finish, duration);
+      signal.addEventListener("abort", finish, { once: true });
+    });
+
+  const cover = async (currentRunId: number, signal: AbortSignal, direction: string) => {
+    const stage = getStage();
+    if (!stage || motionQuery.matches || signal.aborted) return;
+
+    clearTimers();
+    stage.dataset.direction = direction === "back" ? "back" : "forward";
+    const wasCovered = stage.dataset.state === "covered";
+    stage.dataset.state = "covering";
+
+    await waitFor(wasCovered ? 0 : COVER_DURATION_MS, signal);
+    if (signal.aborted || currentRunId !== runId) return;
+
+    stage.dataset.state = "covered";
+    safetyTimer = window.setTimeout(() => setIdle(currentRunId), MAX_COVER_HOLD_MS);
+  };
+
+  const reveal = (currentRunId: number) => {
+    if (currentRunId !== runId) return;
+    clearTimers();
+
+    const stage = getStage();
+    if (!stage || motionQuery.matches) {
+      setIdle(currentRunId);
+      return;
+    }
+
+    stage.dataset.state = "revealing";
+    revealTimer = window.setTimeout(() => setIdle(currentRunId), REVEAL_DURATION_MS);
+  };
+
+  const onBeforePreparation = (rawEvent: Event) => {
+    const event = rawEvent as TransitionBeforePreparationEvent;
+    if (motionQuery.matches || event.from.origin !== event.to.origin) return;
+
+    const currentRunId = ++runId;
+    revealRunId = null;
+    const originalLoader = event.loader;
+
+    event.loader = async () => {
+      try {
+        await Promise.all([
+          originalLoader(),
+          cover(currentRunId, event.signal, event.direction),
+        ]);
+
+        if (event.signal.aborted) {
+          setIdle(currentRunId);
+          return;
+        }
+
+        if (event.defaultPrevented) setIdle(currentRunId);
+      } catch (error) {
+        setIdle(currentRunId);
+        if (!event.signal.aborted) throw error;
+      }
+    };
+  };
+
+  const onBeforeSwap = (rawEvent: Event) => {
+    const event = rawEvent as TransitionBeforeSwapEvent;
+    if (motionQuery.matches || event.signal.aborted) return;
+
+    const stage = getStage();
+    if (stage) stage.dataset.state = "covered";
+  };
+
+  const onAfterSwap = () => {
+    if (motionQuery.matches) {
+      setIdle();
+      return;
+    }
+
+    const stage = getStage();
+    if (stage) stage.dataset.state = "covered";
+    revealRunId = runId;
+  };
+
+  const onPageLoad = () => {
+    if (revealRunId === null || revealRunId !== runId) return;
+    const currentRunId = revealRunId;
+    revealRunId = null;
+    window.requestAnimationFrame(() => reveal(currentRunId));
+  };
+
+  const onMotionPreferenceChange = () => {
+    if (!motionQuery.matches) return;
+    runId += 1;
+    setIdle();
+  };
+
+  window.__percyPageTransitionDispose__?.();
+  document.addEventListener("astro:before-preparation", onBeforePreparation);
+  document.addEventListener("astro:before-swap", onBeforeSwap);
+  document.addEventListener("astro:after-swap", onAfterSwap);
+  document.addEventListener("astro:page-load", onPageLoad);
+  motionQuery.addEventListener("change", onMotionPreferenceChange);
+
+  window.__percyPageTransitionDispose__ = () => {
+    document.removeEventListener("astro:before-preparation", onBeforePreparation);
+    document.removeEventListener("astro:before-swap", onBeforeSwap);
+    document.removeEventListener("astro:after-swap", onAfterSwap);
+    document.removeEventListener("astro:page-load", onPageLoad);
+    motionQuery.removeEventListener("change", onMotionPreferenceChange);
+    runId += 1;
+    setIdle();
+  };
+</script>

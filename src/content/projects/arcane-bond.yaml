@@ -1,0 +1,17 @@
+title: Arcane Bond
+description: A local two-player pixel action game built around asymmetric spell-casting, shared progression, and deterministic browser gameplay.
+url: https://thecyper.github.io/ArcaneBond/
+repoUrl: https://github.com/TheCYPER/ArcaneBond
+stack:
+  - JavaScript
+  - Phaser
+  - HTML/CSS
+  - Python
+status: shipped
+draft: false
+featured: true
+year: 2026
+topics:
+  - Game Development
+  - Local Co-op
+  - Procedural Content

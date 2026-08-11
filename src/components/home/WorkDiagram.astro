@@ -1,0 +1,434 @@
+---
+import type { LongformEntry } from "../../utils/content";
+
+type HomepageData = NonNullable<LongformEntry["data"]["homepage"]>;
+
+interface Props {
+  kind: HomepageData["visual"];
+  caption: string;
+  id: string;
+}
+
+const { kind, caption, id } = Astro.props;
+const titleId = `${id}-title`;
+const descriptionId = `${id}-description`;
+const captionId = `${id}-caption`;
+
+const diagramCopy = {
+  "kimodo-motion-field": {
+    title: "KIMODO prompt and constraint motion field",
+    description:
+      "Abstract articulated poses follow a curved trajectory between sparse anchors, showing a prompt guiding a motion draft while constraints shape selected moments.",
+    stages: ["Prompt", "Sparse constraints", "Motion draft"],
+  },
+  "animgen-latent-loop": {
+    title: "AnimGen latent motion loop",
+    description:
+      "Animation frames enter a compact latent loop and return as a continuous runtime pose sequence, with ghosted poses indicating transitions between frames.",
+    stages: ["Clips", "Latent loop", "Runtime pose"],
+  },
+} satisfies Record<HomepageData["visual"], { title: string; description: string; stages: string[] }>;
+
+const copy = diagramCopy[kind];
+---
+
+<figure
+  class:list={["work-diagram", `work-diagram--${kind}`]}
+  aria-labelledby={`${titleId} ${captionId}`}
+>
+  {
+    kind === "kimodo-motion-field" ? (
+      <svg
+        class="work-diagram__canvas"
+        viewBox="0 0 640 320"
+        role="img"
+        aria-labelledby={`${titleId} ${descriptionId}`}
+        focusable="false"
+      >
+        <title id={titleId}>{copy.title}</title>
+        <desc id={descriptionId}>{copy.description}</desc>
+
+        <rect width="640" height="320" rx="24" fill="var(--diagram-indigo)" />
+        <path d="M0 233C68 206 122 215 173 257C198 277 220 297 264 320H0Z" fill="var(--diagram-yellow)" />
+        <path d="M436 320H640V108C585 128 554 168 540 216C527 259 497 294 436 320Z" fill="var(--diagram-violet)" />
+        <path d="M0 57H229" class="work-diagram__rule" />
+        <path d="M0 70H187" class="work-diagram__rule" />
+        <path d="M477 56H640" class="work-diagram__rule" />
+        <path d="M504 69H640" class="work-diagram__rule" />
+
+        <g class="work-diagram__label" aria-hidden="true">
+          <rect x="28" y="25" width="94" height="31" rx="15.5" fill="var(--diagram-yellow)" />
+          <text x="75" y="45" text-anchor="middle">PROMPT</text>
+          <rect x="399" y="255" width="189" height="31" rx="15.5" fill="var(--diagram-teal)" />
+          <text x="493.5" y="275" text-anchor="middle">MOTION DRAFT</text>
+        </g>
+
+        <path
+          d="M70 219C152 143 212 223 299 152C368 96 442 102 564 155"
+          class="work-diagram__trajectory work-diagram__trajectory--under"
+        />
+        <path
+          d="M70 219C152 143 212 223 299 152C368 96 442 102 564 155"
+          class="work-diagram__trajectory"
+        />
+
+        <g class="work-diagram__pose" transform="translate(128 174) rotate(-14)" aria-hidden="true">
+          <circle cx="0" cy="-31" r="12" />
+          <path d="M0 -18L2 19M0 -8L-24 7M1 -5L22 -17M2 18L-20 43M2 18L28 34" />
+        </g>
+        <g class="work-diagram__pose work-diagram__pose--paper" transform="translate(284 141) rotate(7)" aria-hidden="true">
+          <circle cx="0" cy="-31" r="12" />
+          <path d="M0 -18L0 19M0 -6L-23 -22M0 -6L25 -3M0 18L-15 47M0 18L25 45" />
+        </g>
+        <g class="work-diagram__pose" transform="translate(446 117) rotate(18)" aria-hidden="true">
+          <circle cx="0" cy="-31" r="12" />
+          <path d="M0 -18L-2 17M-1 -7L-25 9M-1 -7L23 -22M-2 17L-31 31M-2 17L15 49" />
+        </g>
+
+        <g class="work-diagram__anchor" transform="translate(70 219)" aria-hidden="true">
+          <circle r="15" />
+          <path d="M-22 0H22M0 -22V22" />
+        </g>
+        <g class="work-diagram__anchor" transform="translate(299 152)" aria-hidden="true">
+          <circle r="15" />
+          <path d="M-22 0H22M0 -22V22" />
+        </g>
+        <g class="work-diagram__anchor" transform="translate(564 155)" aria-hidden="true">
+          <circle r="15" />
+          <path d="M-22 0H22M0 -22V22" />
+        </g>
+
+        <g class="work-diagram__label work-diagram__label--inverse" aria-hidden="true">
+          <text x="28" y="293">SPARSE CONSTRAINTS</text>
+        </g>
+      </svg>
+    ) : (
+      <svg
+        class="work-diagram__canvas"
+        viewBox="0 0 640 320"
+        role="img"
+        aria-labelledby={`${titleId} ${descriptionId}`}
+        focusable="false"
+      >
+        <title id={titleId}>{copy.title}</title>
+        <desc id={descriptionId}>{copy.description}</desc>
+
+        <rect width="640" height="320" rx="24" fill="var(--diagram-yellow)" />
+        <path d="M0 0H236L188 320H0Z" fill="var(--diagram-teal)" />
+        <path d="M466 0H640V320H413C472 244 501 154 466 0Z" fill="var(--diagram-violet)" />
+        <path d="M37 34H203" class="work-diagram__rule" />
+        <path d="M37 47H165" class="work-diagram__rule" />
+        <path d="M459 273H618" class="work-diagram__rule" />
+        <path d="M493 286H618" class="work-diagram__rule" />
+
+        <g class="work-diagram__label" aria-hidden="true">
+          <rect x="31" y="24" width="72" height="31" rx="15.5" fill="var(--diagram-indigo)" />
+          <text x="67" y="44" text-anchor="middle" class="work-diagram__text--paper">CLIPS</text>
+          <rect x="247" y="25" width="146" height="31" rx="15.5" fill="var(--diagram-indigo)" />
+          <text x="320" y="45" text-anchor="middle" class="work-diagram__text--paper">LATENT LOOP</text>
+          <rect x="495" y="24" width="114" height="31" rx="15.5" fill="var(--diagram-indigo)" />
+          <text x="552" y="44" text-anchor="middle" class="work-diagram__text--paper">RUNTIME POSE</text>
+        </g>
+
+        <g class="work-diagram__frames" aria-hidden="true">
+          <rect x="35" y="85" width="102" height="151" rx="12" />
+          <rect x="74" y="105" width="102" height="151" rx="12" class="work-diagram__frame--middle" />
+          <rect x="113" y="125" width="102" height="151" rx="12" class="work-diagram__frame--front" />
+          <g class="work-diagram__mini-pose" transform="translate(163 188)">
+            <circle cx="0" cy="-26" r="9" />
+            <path d="M0 -15L-1 18M-1 -4L-24 7M-1 -3L19 -17M-1 18L-20 44M-1 18L23 40" />
+          </g>
+        </g>
+
+        <g class="work-diagram__latent" aria-hidden="true">
+          <circle cx="322" cy="173" r="85" />
+          <path d="M264 157C279 108 345 90 382 133C419 176 388 237 334 244C281 251 241 211 254 169" />
+          <path d="M255 169L244 151L269 153Z" />
+          <circle cx="286" cy="128" r="8" class="work-diagram__latent-dot work-diagram__latent-dot--yellow" />
+          <circle cx="364" cy="133" r="11" class="work-diagram__latent-dot work-diagram__latent-dot--teal" />
+          <circle cx="369" cy="212" r="8" class="work-diagram__latent-dot work-diagram__latent-dot--violet" />
+          <circle cx="292" cy="218" r="12" class="work-diagram__latent-dot work-diagram__latent-dot--paper" />
+          <path d="M300 172L342 151L358 190L310 205Z" class="work-diagram__latent-shape" />
+        </g>
+
+        <path d="M205 185H238" class="work-diagram__flow-line" aria-hidden="true" />
+        <path d="M405 185H445" class="work-diagram__flow-line" aria-hidden="true" />
+        <path d="M229 176L242 185L229 194Z" class="work-diagram__flow-arrow" aria-hidden="true" />
+        <path d="M436 176L449 185L436 194Z" class="work-diagram__flow-arrow" aria-hidden="true" />
+
+        <g class="work-diagram__output" aria-hidden="true">
+          <rect x="451" y="83" width="156" height="173" rx="14" />
+          <g class="work-diagram__ghost-pose" transform="translate(495 170)">
+            <circle cx="0" cy="-34" r="10" />
+            <path d="M0 -21L0 24M0 -8L-28 11M0 -7L23 -26M0 23L-21 57M0 23L27 48" />
+          </g>
+          <g class="work-diagram__ghost-pose work-diagram__ghost-pose--second" transform="translate(525 170)">
+            <circle cx="0" cy="-34" r="10" />
+            <path d="M0 -21L0 24M0 -8L-25 -17M0 -7L27 7M0 23L-27 46M0 23L19 58" />
+          </g>
+          <g class="work-diagram__pose work-diagram__pose--paper" transform="translate(557 170)">
+            <circle cx="0" cy="-34" r="11" />
+            <path d="M0 -21L0 24M0 -8L-25 -25M0 -7L30 0M0 23L-18 58M0 23L29 44" />
+          </g>
+        </g>
+      </svg>
+    )
+  }
+  <ol class="work-diagram__mobile-legend" aria-label="Diagram stages">
+    {copy.stages.map((stage, index) => (
+      <li>
+        <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+        {stage}
+      </li>
+    ))}
+  </ol>
+  <figcaption id={captionId}>{caption}</figcaption>
+</figure>
+
+<style>
+  .work-diagram {
+    --diagram-indigo: var(--primary);
+    --diagram-yellow: var(--yellow);
+    --diagram-teal: var(--teal);
+    --diagram-violet: var(--violet);
+    --diagram-ink: var(--ink);
+    --diagram-paper: var(--surface);
+
+    width: min(100%, 46rem);
+    margin: clamp(1.25rem, 2.5vw, 2rem) 0 0.25rem;
+  }
+
+  .work-diagram__canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    border: 2px solid var(--diagram-ink);
+    border-radius: 1.55rem;
+    box-shadow: 0.5rem 0.5rem 0 var(--diagram-violet);
+  }
+
+  .work-diagram--animgen-latent-loop .work-diagram__canvas {
+    box-shadow: 0.5rem 0.5rem 0 var(--diagram-teal);
+  }
+
+  .work-diagram figcaption {
+    max-width: 65ch;
+    margin-top: 0.85rem;
+    padding-left: 0.75rem;
+    border-left: 3px solid var(--diagram-indigo);
+    color: var(--muted, #5d5a69);
+    font-family: var(--font-mono, monospace);
+    font-size: 0.78rem;
+    line-height: 1.55;
+  }
+
+  .work-diagram__mobile-legend {
+    display: none;
+  }
+
+  .work-diagram__rule {
+    fill: none;
+    stroke: var(--diagram-ink);
+    stroke-width: 7;
+  }
+
+  .work-diagram__label text {
+    fill: var(--diagram-ink);
+    font-family: var(--font-mono, monospace);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+  }
+
+  .work-diagram__label--inverse text,
+  .work-diagram__label .work-diagram__text--paper {
+    fill: var(--diagram-paper);
+  }
+
+  .work-diagram__trajectory--under {
+    fill: none;
+    stroke: var(--diagram-ink);
+    stroke-linecap: round;
+    stroke-width: 18;
+  }
+
+  .work-diagram__trajectory {
+    fill: none;
+    stroke: var(--diagram-teal);
+    stroke-dasharray: 3 18;
+    stroke-linecap: round;
+    stroke-width: 8;
+  }
+
+  .work-diagram__pose circle,
+  .work-diagram__pose path {
+    fill: var(--diagram-yellow);
+    stroke: var(--diagram-ink);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 8;
+  }
+
+  .work-diagram__pose path {
+    fill: none;
+  }
+
+  .work-diagram__pose--paper circle {
+    fill: var(--diagram-paper);
+  }
+
+  .work-diagram__anchor circle {
+    fill: var(--diagram-teal);
+    stroke: var(--diagram-ink);
+    stroke-width: 5;
+  }
+
+  .work-diagram__anchor path {
+    fill: none;
+    stroke: var(--diagram-paper);
+    stroke-linecap: round;
+    stroke-width: 3;
+  }
+
+  .work-diagram__frames rect,
+  .work-diagram__output > rect {
+    fill: var(--diagram-paper);
+    stroke: var(--diagram-ink);
+    stroke-width: 5;
+  }
+
+  .work-diagram__frames .work-diagram__frame--middle {
+    fill: var(--diagram-violet);
+  }
+
+  .work-diagram__frames .work-diagram__frame--front {
+    fill: var(--diagram-indigo);
+  }
+
+  .work-diagram__mini-pose circle,
+  .work-diagram__mini-pose path,
+  .work-diagram__ghost-pose circle,
+  .work-diagram__ghost-pose path {
+    fill: var(--diagram-yellow);
+    stroke: var(--diagram-ink);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 6;
+  }
+
+  .work-diagram__mini-pose path,
+  .work-diagram__ghost-pose path {
+    fill: none;
+  }
+
+  .work-diagram__latent > circle:first-child {
+    fill: var(--diagram-indigo);
+    stroke: var(--diagram-ink);
+    stroke-width: 6;
+  }
+
+  .work-diagram__latent > path:not(.work-diagram__latent-shape) {
+    fill: none;
+    stroke: var(--diagram-paper);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 5;
+  }
+
+  .work-diagram__latent > path:nth-of-type(2) {
+    fill: var(--diagram-paper);
+    stroke: none;
+  }
+
+  .work-diagram__latent-dot {
+    stroke: var(--diagram-ink);
+    stroke-width: 4;
+  }
+
+  .work-diagram__latent-dot--yellow {
+    fill: var(--diagram-yellow);
+  }
+
+  .work-diagram__latent-dot--teal {
+    fill: var(--diagram-teal);
+  }
+
+  .work-diagram__latent-dot--violet {
+    fill: var(--diagram-violet);
+  }
+
+  .work-diagram__latent-dot--paper {
+    fill: var(--diagram-paper);
+  }
+
+  .work-diagram__latent-shape {
+    fill: var(--diagram-violet);
+    stroke: var(--diagram-ink);
+    stroke-linejoin: round;
+    stroke-width: 4;
+  }
+
+  .work-diagram__flow-line {
+    fill: none;
+    stroke: var(--diagram-ink);
+    stroke-dasharray: 5 8;
+    stroke-width: 4;
+  }
+
+  .work-diagram__flow-arrow {
+    fill: var(--diagram-ink);
+  }
+
+  .work-diagram__ghost-pose {
+    opacity: 0.22;
+  }
+
+  .work-diagram__ghost-pose--second {
+    opacity: 0.48;
+  }
+
+  @media (max-width: 40rem) {
+    .work-diagram__canvas,
+    .work-diagram--animgen-latent-loop .work-diagram__canvas {
+      border-radius: 1rem;
+      box-shadow: 0.3rem 0.3rem 0 var(--diagram-violet);
+    }
+
+    .work-diagram--animgen-latent-loop .work-diagram__canvas {
+      box-shadow: 0.3rem 0.3rem 0 var(--diagram-teal);
+    }
+
+    .work-diagram .work-diagram__mobile-legend {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      padding: 0;
+      margin: 1rem 0 0;
+      border-block: 1px solid var(--diagram-ink);
+      font-family: var(--font-mono, monospace);
+      font-size: 0.75rem;
+      line-height: 1.35;
+      list-style: none;
+      text-transform: uppercase;
+    }
+
+    .work-diagram .work-diagram__mobile-legend > li {
+      display: grid;
+      grid-column: auto;
+      grid-template-columns: 1fr;
+      gap: 0.3rem;
+      padding: 0.65rem 0.45rem;
+      border-bottom: 0;
+    }
+
+    .work-diagram .work-diagram__mobile-legend > li + li {
+      border-left: 1px solid var(--diagram-ink);
+    }
+
+    .work-diagram__mobile-legend span {
+      color: var(--diagram-indigo);
+      font-size: 0.68rem;
+      font-weight: 700;
+    }
+  }
+</style>

@@ -1,0 +1,23 @@
+---
+import { siteConfig } from "../config/site";
+import { profile } from "../data/profile";
+
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer" lang="en">
+  <div class="site-footer__inner shell">
+    <div>
+      <p class="site-footer__title">{profile.name}</p>
+      <p>{profile.identityLine}</p>
+    </div>
+    <nav class="site-footer__links" aria-label="Public profile links">
+      <a href={siteConfig.rssPath}>RSS</a>
+      <a href={profile.links.github} target="_blank" rel="noreferrer">GitHub ↗</a>
+      <a href={profile.links.linkedin} target="_blank" rel="noreferrer">LinkedIn ↗</a>
+      <a href={`mailto:${profile.links.email}`}>Email</a>
+      {profile.cvUrl && <a href={profile.cvUrl}>CV</a>}
+    </nav>
+    <p class="site-footer__copyright">© {year} {profile.name}. Content rights reserved.</p>
+  </div>
+</footer>

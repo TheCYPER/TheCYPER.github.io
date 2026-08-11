@@ -1,0 +1,38 @@
+---
+import type { GetStaticPaths } from "astro";
+import { getCollection, render } from "astro:content";
+import ArticleLayout from "../../layouts/ArticleLayout.astro";
+import {
+  entrySlug,
+  isPublished,
+  relatedEntries,
+  sortByPublishedDate,
+  type LongformEntry,
+} from "../../utils/content";
+
+export const getStaticPaths = (async () => {
+  const [caseStudies, articles] = await Promise.all([
+    getCollection("case-studies", isPublished),
+    getCollection("articles", isPublished),
+  ]);
+  const ordered = sortByPublishedDate(caseStudies);
+  const allContent: LongformEntry[] = [...caseStudies, ...articles];
+
+  return ordered.map((entry, index) => ({
+    params: { slug: entrySlug(entry) },
+    props: {
+      entry,
+      previous: ordered[index - 1],
+      next: ordered[index + 1],
+      related: relatedEntries(entry, allContent),
+    },
+  }));
+}) satisfies GetStaticPaths;
+
+const { entry, previous, next, related } = Astro.props;
+const { Content, headings } = await render(entry);
+---
+
+<ArticleLayout entry={entry} headings={headings} previous={previous} next={next} related={related}>
+  <Content />
+</ArticleLayout>

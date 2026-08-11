@@ -1,0 +1,137 @@
+---
+interface Props {
+  /** Backward-compatible single source. Prefer an MP4 fallback here. */
+  src?: string;
+  srcType?: string;
+  webmSrc?: string;
+  mp4Src?: string;
+  label: string;
+  caption: string;
+  width?: number;
+  height?: number;
+  poster?: string;
+  captionsSrc?: string;
+  captionsLang?: string;
+  captionsLabel?: string;
+  captionsDefault?: boolean;
+  transcriptHref?: string;
+  transcriptLabel?: string;
+  credit?: string;
+  creditHref?: string;
+  license?: string;
+  licenseHref?: string;
+  muted?: boolean;
+  loop?: boolean;
+  playsinline?: boolean;
+  preload?: "none" | "metadata";
+  wide?: boolean;
+}
+
+interface VideoSource {
+  src: string;
+  type?: string;
+}
+
+const {
+  src,
+  srcType,
+  webmSrc,
+  mp4Src,
+  label,
+  caption,
+  width,
+  height,
+  poster,
+  captionsSrc,
+  captionsLang = "en",
+  captionsLabel = "Captions",
+  captionsDefault = true,
+  transcriptHref,
+  transcriptLabel = "Read transcript",
+  credit,
+  creditHref,
+  license,
+  licenseHref,
+  muted = false,
+  loop = false,
+  playsinline = true,
+  preload = "none",
+  wide = false,
+} = Astro.props;
+
+const inferVideoType = (source: string) => {
+  const path = source.split(/[?#]/, 1)[0].toLowerCase();
+
+  if (path.endsWith(".webm")) return "video/webm";
+  if (path.endsWith(".mp4") || path.endsWith(".m4v")) return "video/mp4";
+
+  return undefined;
+};
+
+const sourceCandidates: VideoSource[] = [];
+
+if (webmSrc) sourceCandidates.push({ src: webmSrc, type: "video/webm" });
+if (mp4Src) sourceCandidates.push({ src: mp4Src, type: "video/mp4" });
+if (src) sourceCandidates.push({ src, type: srcType ?? inferVideoType(src) });
+
+const sources = sourceCandidates.filter(
+  (source, index) => sourceCandidates.findIndex((candidate) => candidate.src === source.src) === index,
+);
+
+if (sources.length === 0) {
+  throw new Error("VideoFigure requires src, webmSrc, or mp4Src.");
+}
+
+const fallbackSrc = mp4Src ?? src ?? webmSrc;
+const hasMetadata = Boolean(credit || license || transcriptHref);
+---
+
+<figure class:list={["content-figure", { "content-figure--wide": wide }] }>
+  <video
+    poster={poster}
+    controls
+    preload={preload}
+    aria-label={label}
+    width={width}
+    height={height}
+    muted={muted}
+    loop={loop}
+    playsinline={playsinline}
+  >
+    {sources.map((source) => <source src={source.src} type={source.type} />)}
+    {captionsSrc && (
+      <track
+        kind="captions"
+        src={captionsSrc}
+        srclang={captionsLang}
+        label={captionsLabel}
+        default={captionsDefault}
+      />
+    )}
+    <a href={fallbackSrc}>Open or download {label}</a>.
+  </video>
+  <figcaption>
+    <span class="content-figure__caption">{caption}</span>
+    {hasMetadata && (
+      <span class="content-figure__credit">
+        {transcriptHref && (
+          <span class="content-figure__meta-item">
+            <a class="content-figure__transcript" href={transcriptHref}>{transcriptLabel}</a>
+          </span>
+        )}
+        {credit && (
+          <span class="content-figure__meta-item">
+            <span class="content-figure__meta-label">Credit:</span>{" "}
+            {creditHref ? <a href={creditHref}>{credit}</a> : credit}
+          </span>
+        )}
+        {license && (
+          <span class="content-figure__meta-item">
+            <span class="content-figure__meta-label">License:</span>{" "}
+            {licenseHref ? <a href={licenseHref} rel="license">{license}</a> : license}
+          </span>
+        )}
+      </span>
+    )}
+  </figcaption>
+</figure>

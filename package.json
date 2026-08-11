@@ -1,0 +1,41 @@
+{
+  "name": "thecyper-github-io",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "npm@12.0.1",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "check": "astro check && node scripts/check-publication-contract.mjs && node scripts/check-homepage-contract.mjs && node scripts/check-cv-audit.mjs",
+    "build": "astro build",
+    "preview": "astro preview",
+    "generate:og": "node scripts/generate-og.mjs",
+    "audit:public": "node scripts/audit-public.mjs",
+    "check:links": "node scripts/check-links.mjs",
+    "check:release": "node scripts/check-release-ready.mjs",
+    "check:seo": "node scripts/check-seo.mjs",
+    "validate": "npm run check && npm run build && npm run audit:public && npm run check:links && npm run check:seo"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "7.0.5",
+    "@astrojs/rss": "4.0.19",
+    "@astrojs/sitemap": "3.7.3",
+    "@fontsource-variable/ibm-plex-sans": "^5.3.0",
+    "@fontsource-variable/noto-sans-sc": "5.3.0",
+    "@fontsource-variable/noto-serif-sc": "5.3.0",
+    "@fontsource-variable/source-serif-4": "5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "astro": "7.2.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.10",
+    "@types/node": "^24.10.0",
+    "pdfjs-dist": "5.4.624",
+    "sharp": "0.35.3",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

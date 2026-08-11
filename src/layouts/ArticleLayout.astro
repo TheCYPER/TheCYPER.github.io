@@ -1,0 +1,139 @@
+---
+import type { MarkdownHeading } from "astro";
+import { getCollection } from "astro:content";
+import ArticleCard from "../components/ArticleCard.astro";
+import SeriesNav from "../components/SeriesNav.astro";
+import BaseLayout from "./BaseLayout.astro";
+import {
+  contentHref,
+  contentTypeLabel,
+  formatDate,
+  isPublished,
+  readingTime,
+  type LongformEntry,
+} from "../utils/content";
+
+interface Props {
+  entry: LongformEntry;
+  headings: MarkdownHeading[];
+  previous?: LongformEntry;
+  next?: LongformEntry;
+  related?: LongformEntry[];
+}
+
+const { entry, headings, previous, next, related = [] } = Astro.props;
+const visibleHeadings = headings.filter(({ depth }) => depth === 2 || depth === 3);
+const readMinutes = readingTime(entry.body);
+const kind = contentTypeLabel(entry);
+const href = contentHref(entry);
+const isChinese = entry.data.language === "zh-CN";
+let seriesEntries: LongformEntry[] = [];
+
+if (entry.data.series) {
+  const [caseStudies, articles] = await Promise.all([
+    getCollection("case-studies", isPublished),
+    getCollection("articles", isPublished),
+  ]);
+  seriesEntries = [...caseStudies, ...articles].filter(
+    ({ data }) => data.series?.id === entry.data.series?.id,
+  );
+}
+---
+
+<BaseLayout
+  title={entry.data.title}
+  description={entry.data.description}
+  canonicalPath={href}
+  image={entry.data.hero?.src}
+  imageAlt={entry.data.hero?.alt}
+  type="article"
+  language={entry.data.language}
+  publishedAt={entry.data.publishedAt}
+  updatedAt={entry.data.updatedAt}
+>
+  <article>
+    <header class="article-hero shell">
+      <p class="eyebrow" lang="en">{kind}</p>
+      <h1>{entry.data.title}</h1>
+      <p class="article-hero__description">{entry.data.description}</p>
+      <div class="article-hero__meta">
+        <span>{isChinese ? "发布于" : "Published"} {formatDate(entry.data.publishedAt, entry.data.language)}</span>
+        {entry.data.updatedAt && <span>{isChinese ? "更新于" : "Updated"} {formatDate(entry.data.updatedAt, entry.data.language)}</span>}
+        <span lang="en">{readMinutes} min read</span>
+        {entry.data.collection && <a href={`/research/${entry.data.collection}/`} lang="en">Evidence archive</a>}
+      </div>
+    </header>
+
+    <div class="article-shell shell">
+      <div class="prose">
+        <slot />
+      </div>
+
+      {visibleHeadings.length > 0 && (
+        <aside class="article-sidebar" lang={entry.data.language}>
+          <div class="article-sidebar__inner table-of-contents">
+            <details class="table-of-contents__details">
+              <summary>
+                <span>{isChinese ? "目录" : "Contents"}</span>
+                <span>{visibleHeadings.length} {isChinese ? "节" : "sections"}</span>
+              </summary>
+              <h2>{isChinese ? "本文目录" : "On this page"}</h2>
+              <ol>
+                {
+                  visibleHeadings.map((heading) => (
+                    <li data-depth={heading.depth}>
+                      <a href={`#${heading.slug}`}>{heading.text}</a>
+                    </li>
+                  ))
+                }
+              </ol>
+            </details>
+          </div>
+        </aside>
+      )}
+    </div>
+
+    <footer class="article-footer shell">
+      {entry.data.series && <SeriesNav entry={entry} entries={seriesEntries} />}
+
+      {(previous || next) && (
+        <nav class="prev-next" aria-label={isChinese ? "文章翻页" : "Article navigation"}>
+          {
+            previous ? (
+              <a href={contentHref(previous)} lang={previous.data.language}>
+                <small lang="en">← Newer</small>
+                <strong>{previous.data.title}</strong>
+              </a>
+            ) : (
+              <span class="prev-next__empty" aria-hidden="true"></span>
+            )
+          }
+          {
+            next ? (
+              <a href={contentHref(next)} lang={next.data.language}>
+                <small lang="en">Older →</small>
+                <strong>{next.data.title}</strong>
+              </a>
+            ) : (
+              <span class="prev-next__empty" aria-hidden="true"></span>
+            )
+          }
+        </nav>
+      )}
+
+      {related.length > 0 && (
+        <section class="article-footer__related section-space" aria-labelledby="related-heading" lang="en">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Continue exploring</p>
+              <h2 id="related-heading">Related notes</h2>
+            </div>
+          </div>
+          <div class="article-index article-index--related">
+            {related.map((candidate, index) => <ArticleCard entry={candidate} order={index + 1} />)}
+          </div>
+        </section>
+      )}
+    </footer>
+  </article>
+</BaseLayout>

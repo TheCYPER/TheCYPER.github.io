@@ -1,0 +1,31 @@
+---
+import { getCollection } from "astro:content";
+import ArticleCard from "../../components/ArticleCard.astro";
+import PageHeader from "../../components/PageHeader.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { isPublished, sortByPublishedDate } from "../../utils/content";
+
+const entries = sortByPublishedDate(
+  await getCollection("articles", isPublished),
+);
+---
+
+<BaseLayout title="Notes" description="Explainers, tutorials, evaluations, and field notes about AI, motion, and engineering systems.">
+  <PageHeader
+    eyebrow="Explanations and field notes"
+    title="Notes"
+    description="Technical writing that separates what a system is designed to do, what I observed, and what remains unproven."
+    count={entries.length}
+  />
+  <section class="shell section-space" aria-label="Technical notes">
+    {
+      entries.length > 0 ? (
+        <div class="article-index archive-index">
+          {entries.map((entry, index) => <ArticleCard entry={entry} order={index + 1} />)}
+        </div>
+      ) : (
+        <div class="empty-state"><h2>No published notes yet</h2><p>Reviewed writing will appear here.</p></div>
+      )
+    }
+  </section>
+</BaseLayout>

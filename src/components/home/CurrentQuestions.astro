@@ -1,0 +1,35 @@
+---
+import type { CollectionEntry } from "astro:content";
+
+interface Props {
+  questions: CollectionEntry<"research-questions">[];
+  eyebrow?: string;
+  heading: string;
+  id: string;
+}
+
+const { questions, eyebrow, heading, id } = Astro.props;
+---
+
+<section class="question-section" aria-labelledby={id}>
+  <header class="home-section-heading">
+    {eyebrow && <p class="eyebrow">{eyebrow}</p>}
+    <h2 id={id}>{heading}</h2>
+  </header>
+  <ol class="question-list">
+    {
+      questions.map((question, index) => (
+        <li>
+          <span class="question-list__index" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+          <div>
+            <h3>
+              {question.data.href ? <a href={question.data.href}>{question.data.title}</a> : question.data.title}
+            </h3>
+            <p>{question.data.summary}</p>
+          </div>
+          <span class="question-list__status">{question.data.status}</span>
+        </li>
+      ))
+    }
+  </ol>
+</section>

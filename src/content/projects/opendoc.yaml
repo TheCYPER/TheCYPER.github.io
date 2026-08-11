@@ -1,0 +1,25 @@
+title: OpenDoc
+description: A team-built real-time collaborative editor; Percy owned backend, authentication, permissions, sharing, and developer tooling, with Yjs/WebSocket sync and an AI writing workflow streamed over SSE.
+url: https://github.com/TheCYPER/SoftProject1-OpenDoc
+repoUrl: https://github.com/TheCYPER/SoftProject1-OpenDoc
+stack:
+  - Python
+  - FastAPI
+  - TypeScript
+  - React
+  - Tiptap
+  - Yjs
+status: shipped
+draft: false
+role: Backend, authentication, permissions, sharing, and developer tooling
+contributions:
+  - Backend architecture
+  - Authentication and permissions
+  - Real-time collaboration infrastructure
+  - AI writing workflow integration
+featured: true
+year: 2026
+topics:
+  - Collaborative Editing
+  - AI Tools
+  - Full-stack

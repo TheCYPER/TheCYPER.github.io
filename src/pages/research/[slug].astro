@@ -1,0 +1,55 @@
+---
+import type { GetStaticPaths } from "astro";
+import type { CollectionEntry } from "astro:content";
+import { getCollection } from "astro:content";
+import ArticleCard from "../../components/ArticleCard.astro";
+import PageHeader from "../../components/PageHeader.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { isPublished, sortByPublishedDate, type LongformEntry } from "../../utils/content";
+
+export const getStaticPaths = (async () => {
+  const [tracks, caseStudies, articles] = await Promise.all([
+    getCollection("research-collections"),
+    getCollection("case-studies", isPublished),
+    getCollection("articles", isPublished),
+  ]);
+  const allContent: LongformEntry[] = [...caseStudies, ...articles];
+
+  return tracks.map((track) => ({
+    params: { slug: track.id },
+    props: {
+      track,
+      entries: sortByPublishedDate(
+        allContent.filter(({ data }) => data.collection === track.id),
+      ),
+    },
+  }));
+}) satisfies GetStaticPaths;
+
+interface Props {
+  track: CollectionEntry<"research-collections">;
+  entries: LongformEntry[];
+}
+
+const { track, entries } = Astro.props;
+---
+
+<BaseLayout title={track.data.title} description={track.data.description} canonicalPath={`/research/${track.id}/`}>
+  <PageHeader
+    eyebrow={track.data.eyebrow}
+    title={track.data.title}
+    description={track.data.description}
+    count={entries.length}
+  />
+  <section class="shell section-space" aria-label={`${track.data.title} articles`}>
+    {
+      entries.length > 0 ? (
+        <div class="article-index archive-index">
+          {entries.map((entry, index) => <ArticleCard entry={entry} order={index + 1} />)}
+        </div>
+      ) : (
+        <div class="empty-state"><h2>No published records yet</h2><p>Only reviewed, public evidence appears in this archive.</p></div>
+      )
+    }
+  </section>
+</BaseLayout>

@@ -1,0 +1,9 @@
+title: KIMODO Martial-Arts Adapter
+summary: Which data, training, and evaluation loops can extend a motion foundation model toward martial arts while exposing failure as clearly as success?
+status: active
+homepage: true
+order: 2
+topics:
+  - motion-generation
+  - fine-tuning
+  - evaluation

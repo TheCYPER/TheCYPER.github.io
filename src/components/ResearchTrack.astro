@@ -1,0 +1,24 @@
+---
+import type { CollectionEntry } from "astro:content";
+
+interface Props {
+  track: CollectionEntry<"research-collections">;
+  count: number;
+}
+
+const { track, count } = Astro.props;
+---
+
+<article class="research-track">
+  <div class="research-track__status" lang="en">
+    <span class="status-dot" aria-hidden="true"></span>
+    {track.data.status}
+  </div>
+  <p class="eyebrow">{track.data.eyebrow}</p>
+  <h2><a href={`/research/${track.id}/`}>{track.data.title}</a></h2>
+  <p>{track.data.description}</p>
+  <div class="research-track__footer" lang="en">
+    <span>{String(count).padStart(2, "0")} records</span>
+    <span aria-hidden="true">→</span>
+  </div>
+</article>

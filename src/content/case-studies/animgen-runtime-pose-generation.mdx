@@ -1,0 +1,249 @@
+---
+title: "UE 5.8 AnimGen：从 1,312 段有效动画到 Runtime Pose Generation"
+description: "一次 UE 5.8 Preview 单卡实验：过滤 additive 数据，训练 AutoEncoder 与两阶段 Controller，并在 AnimBP 的 PIE 循环中验证单角色 runtime pose generation。"
+publishedAt: "2026-05-29"
+draft: false
+publicationState: approved-for-publication
+language: zh-CN
+homepage:
+  order: 2
+  title: "AnimGen: from 1,312 valid clips to runtime pose generation"
+  description: "A bounded UE 5.8 experiment that connected data filtering, model training, and a single-character Anim BP runtime proof of concept."
+  visual: animgen-latent-loop
+  visualCaption: "Filtered animation clips are encoded into a latent representation, evolved frame by frame, and decoded into a runtime pose sequence."
+collection: ai-animation
+topics:
+  - AI Animation
+  - Unreal Engine
+  - AnimGen
+  - Motion Generation
+  - PyTorch
+featured: true
+experiment:
+  period: "2026-05-23 至 2026-05-29"
+  software:
+    - Unreal Engine 5.8 Preview
+    - AnimGen / AnimDatabase / LearningCore
+    - PyTorch 2.7 + CUDA 12.8
+  hardware:
+    - NVIDIA GeForce RTX 5060 Ti（16 GB）
+verification:
+  verified:
+    - "导入 1,374 段样例 AnimSequence，按 asset property 移除 62 段 additive，最终训练集为 1,312 段。"
+    - "完成 AutoEncoder 与 Controller 训练，并记录各阶段 TensorBoard loss。"
+    - "在单角色、_Uncontrolled Behavior 的 AnimBP 中通过 PIE 跑通 runtime pose 输出。"
+  notVerified:
+    - "TrajectoryFollow 等可控 Behavior 的最终质量、可重复性与生产级自然过渡。"
+    - "干净的同屏多角色性能、跨角色 batching 与长时间 runtime 稳定性。"
+    - "跨骨架泛化、retarget 后质量、网络与资产跨 UE 版本兼容性。"
+licenses:
+  - asset: "Epic Games 样例动画与 Unreal Engine 资料"
+    status: linked-only
+    note: "仅描述实验并链接官方页面；不分发样例动画、.uasset、训练数据或模型产物。"
+  - asset: "TensorBoard 截图与 runtime 录屏"
+    status: replaced
+    note: "公开版用原创表格和文本流程图替代，未再分发第三方派生媒体。"
+  - asset: "选定的 AnimDatabase 实验截图"
+    status: permitted
+    note: "Percy 已确认可在本作品集发布；截图只记录本地数据审计检查点，不再分发样例动画、.uasset、训练数据或模型。"
+  - asset: "本文原创文字与文本图解"
+    status: owned
+problem: "AnimGen 在 UE 5.8 Preview 中缺少成熟公开使用路径；需要确认从动画数据库、训练到 AnimBP runtime 的端到端链路是否真实可行，并标清它尚未证明的能力。"
+role: "独立完成数据审计、环境兼容修复、单卡训练、TensorBoard 诊断、AnimBP 接线与 PIE 验证。"
+duration: "7 天"
+stack:
+  - Unreal Engine 5.8 Preview
+  - AnimGen
+  - AnimDatabase
+  - LearningCore
+  - PyTorch
+  - CUDA 12.8
+  - Animation Blueprint
+outcomes:
+  - "把 1,374 段输入收敛为 1,312 段 non-additive 训练集。"
+  - "完成 AutoEncoder、flow-matching Denoiser 与 LOD distillation 两阶段训练，归档总训练约 18 小时的 baseline。"
+  - "验证单角色 _Uncontrolled Behavior 的 PIE runtime pose generation 闭环，并明确没有证明生产级或多角色性能。"
+---
+
+import ExperimentCard from "../../components/mdx/ExperimentCard.astro";
+import ClaimBoundary from "../../components/mdx/ClaimBoundary.astro";
+import Figure from "../../components/mdx/Figure.astro";
+
+这次实验不是为了证明“AI 动画已经能上线”，而是回答一个更窄、也更有工程价值的问题：在 UE 5.8 Preview 里，AnimGen 能否从一组动画样本出发，经过训练，在 Animation Blueprint 的 runtime 节点里持续输出 pose？
+
+答案是：**单角色、`_Uncontrolled` Behavior 的端到端闭环跑通了；可控性、主观质量与多角色性能仍未被这次实验证明。**
+
+<ExperimentCard
+  period="2026-05-23 至 2026-05-29"
+  software={[
+    "Unreal Engine 5.8 Preview",
+    "AnimGen / AnimDatabase / LearningCore",
+    "PyTorch 2.7 + CUDA 12.8（为 RTX 5060 Ti 做兼容替换）",
+  ]}
+  hardware={["NVIDIA GeForce RTX 5060 Ti（16 GB）"]}
+  conditions={[
+    "单 GPU 训练",
+    "Epic mannequin 样例动画，仅用于本地实验",
+    "单角色、_Uncontrolled Behavior、PIE runtime 验证",
+  ]}
+/>
+
+## 从“动画库”到“每帧 pose”的链路
+
+```text
+1,374 AnimSequence
+      │ inspect additive_anim_type
+      ├─ remove 62 additive clips
+      ▼
+1,312 non-additive clips
+      │ ToPoseVectors
+      ▼
+~800D pose ── AutoEncoder ──► 150D latent
+                                  │
+Behavior control ── Controller ───┤ flow matching + LOD distillation
+                                  ▼
+                            runtime latent
+                                  │ Decoder
+                                  ▼
+                           AnimGraph output pose
+```
+
+AnimGen 的关键不是简单播放训练片段。训练时，AnimDatabase 把骨骼 pose 展平成向量；AutoEncoder 学习紧凑的 latent 空间；Controller 在 Behavior 条件下预测 latent 的演化；runtime 再经 Decoder 还原为 AnimGraph 可消费的 pose。
+
+在这次快照里，runtime 推理走 LearningCore 的 CPU 路径，而不是 NNE 或 GPU。训练产物也是 UE 自有的神经网络数据，不应被当成通用 ONNX 模型或跨版本稳定格式。
+
+## 数据关：1,374 不是最终训练规模
+
+最早的导入结果是 1,374 段 AnimSequence。直接点击 AutoEncoder Train 会失败，因为数据中混有 additive 动画。Additive clip 表示相对基础 pose 的偏移，不能和完整 pose 序列按同一方式送进这条训练链。
+
+路径名过滤并不可靠：AimOffset、Lean 与 Pose Base 分散在不同目录，命名也不能覆盖所有情况。最终采用的是资产本身的 `additive_anim_type`：
+
+```python
+non_additive = [
+    sequence
+    for sequence in entries
+    if sequence.additive_anim_type == AAT_NONE
+]
+```
+
+结果是移除 62 段 additive clip，训练集从 **1,374 收敛到 1,312**。这两个数字描述的是本次样例库，不是 AnimGen 的最小数据要求或官方容量上限。
+
+<Figure
+  src="/media/articles/animgen-runtime-pose-generation/animdatabase-batch-import.png"
+  alt="Unreal Engine AnimDatabase editor showing 1,374 imported animation entries before additive filtering"
+  caption="AnimDatabase 批量导入后的检查点：界面显示 1,374 个 entries；随后再按 asset property 移除 62 段 additive clip。截图记录过滤前状态，不代表可再分发的样例资产集合。"
+  width={1704}
+  height={949}
+  credit="Percy Liu，本地 AnimGen 数据审计"
+  license="作品集发布许可已确认；Epic 样例资产权利不变"
+  wide
+/>
+
+数据过滤后的验证也不只看 Entries 数字。我同时检查 Skeleton、Query frame ranges 与实际可采样条目，避免 skeleton 不兼容的 clip 被静默丢弃后仍误以为导入完整。
+
+## 环境关：`cuda.is_available()` 不是兼容性证明
+
+实验机使用 RTX 5060 Ti。UE 5.8 Preview 当时随项目安装的 PyTorch 2.5.1 + CUDA 12.4 无法为 Blackwell `sm_120` 执行需要的 kernel；仅检查 `torch.cuda.is_available()` 可能仍会得到误导性的结果。
+
+我把验证改成三步：版本、分配、实际运算。
+
+```python
+import torch
+
+print(torch.__version__, torch.cuda.is_available())
+x = torch.zeros(4, device="cuda")
+print((x + 1).sum().item())
+```
+
+在本次项目环境中，将项目本地 Python 包替换为 **PyTorch 2.7 + CUDA 12.8** 后，实际 GPU op 才通过。这个版本组合是 2026-05 这台 RTX 5060 Ti 的实验记录，不是对所有机器的永久安装建议；复现时应先查 [PyTorch 官方版本矩阵](https://pytorch.org/get-started/previous-versions/)，再做真实 tensor 运算。
+
+## 训练关：AutoEncoder 先建空间，Controller 再生成轨迹
+
+### AutoEncoder：四项 loss 不只是“重建误差”
+
+AutoEncoder 把约 800 维 pose 向量压到默认 150 维 latent，再解码回 pose。训练目标由四部分组成：
+
+| Loss | 约束对象 | 作用 |
+|---|---|---|
+| `loss_val` | 重建 pose | 让 Decoder 还原输入姿态 |
+| `loss_del` | 帧间变化 | 让重建运动保留时间连续性 |
+| `loss_reg_l1` | latent 值 | 抑制 latent 无界增长 |
+| `loss_reg_diff` | latent 帧间变化 | 让潜空间轨迹更平滑 |
+
+归档 baseline 使用默认容量与 250k iterations。`loss_val` 从 0.025 降到 0.006；这说明优化目标在收敛，也通过了当时的数值健康检查，但它不等价于“肉眼质量已经达到生产标准”。
+
+### Controller Stage 1：flow matching Denoiser
+
+Controller 接收噪声 pose、时间步与 Behavior control，学习从噪声指向目标 latent pose 的速度场。Stage 1 的主指标从 0.22 降到 0.09。这个阶段同时训练控制编码与 Denoiser，是整个生成模型的基础。
+
+### Controller Stage 2：把多步 teacher 蒸馏成 runtime LOD
+
+训练阶段可以让 Denoiser rollout 多步得到较好的目标，runtime 却不能为每个角色每帧承担同样成本。Stage 2 因此冻结 Denoiser，用多步结果监督 LOD0/1/2 的单步网络。归档的 LOD 加权 loss 从 0.024 降到 0.015。
+
+这份 baseline 的完整训练记录约 **18 小时**，运行在单张 RTX 5060 Ti 上。Loss 下降证明训练过程可运行并趋于稳定；它不能单独证明脚滑、接触、转向自然度或复杂控制的主观质量。
+
+## Runtime 关：PIE 需要一个每帧闭环
+
+训练完成并不意味着把 Controller asset 拖进 AnimGraph 就会动。`ControlObject` 的生命周期是这个集成里最容易漏掉的一环：容器需要在 Animation Blueprint 初始化时创建，而 Behavior element 会被 AnimNode 每帧消费和 reset，所以 Update 阶段必须持续补充。
+
+```text
+Event Blueprint Initialize Animation
+  └─ Make Control Object
+       └─ SET ControlObject
+
+Event Blueprint Update Animation
+  └─ Make Uncontrolled Behavior Control(Get ControlObject by ref)
+       └─ SET ControlObjectElement
+
+AnimGraph, every evaluated frame
+  ControlObject + ControlObjectElement + Controller asset
+       └─ Anim Gen Controller
+            └─ Decoder
+                 └─ Output Pose
+```
+
+如果只建 struct 变量却没有分配底层 ControlObject，或只在初始化阶段写一次 Behavior，PIE 会回到 reference pose。最终验证采用的是单角色、`_Uncontrolled` Behavior：角色在 PIE 中持续输出非 T-pose 的随机动作序列，完成了 AnimDatabase → AutoEncoder → Controller → AnimBP 的闭环。
+
+这里刻意使用“跑通 runtime pose 输出”，而不是“生成了可用 locomotion”。`_Uncontrolled` 不要求角色遵循路径或速度目标，它适合证明管线连通，却不足以证明可控动画质量。
+
+## 为什么没有用 DDP
+
+PyTorch 支持 DistributedDataParallel，不代表嵌在 UE Editor 里的训练器能直接扩成多 rank。
+
+AnimGen 的训练链由 UE 启动一个 Python 子进程，并用 Windows Named Shared Memory 交换 pose、控制数组、进度与网络权重。配置里的每个 GUID 在当前实现中按 **1:1 attach** 使用。直接增加 DDP rank 会让多个进程争用同一组共享 buffer 与权重写回位置，带来 race condition；这不是加一段 `torchrun` 参数就能解决的问题。
+
+此外，这次环境只有一张 GPU，训练数据已经 mmap 到内存，Controller 的 Denoiser 规模也远小于需要 FSDP 才能装下的大模型。综合 IPC 改造成本与可获得收益，DDP 对这次实验没有实际价值。这个结论针对当前 UE↔Python IPC 架构与单卡条件，不代表 AnimGen 永远不能做多 GPU；要做到，需要先重设计共享内存协议、rank ownership 与最终权重汇聚。
+
+## 已经证明什么，还没有证明什么
+
+<ClaimBoundary
+  verified={[
+    "1,374 段样例动画成功导入；按 additive_anim_type 移除 62 段后，以 1,312 段 non-additive clip 进入训练。",
+    "RTX 5060 Ti 环境中，项目本地 PyTorch 2.7 + CUDA 12.8 通过了实际 CUDA tensor 运算。",
+    "AutoEncoder、Controller Stage 1 与 Stage 2 均完成训练并留下 loss 记录，baseline 总训练约 18 小时。",
+    "单角色、_Uncontrolled Behavior 的 AnimBP 在 PIE 中持续输出 runtime pose。",
+  ]}
+  notVerified={[
+    "TrajectoryFollow、MoveToTarget 等可控 Behavior 的最终质量与跨场景稳定性。",
+    "生产级 Anim A→B 过渡、脚部接触、复杂交互与风格一致性。",
+    "干净的同屏多角色性能、跨角色 batching、长时间运行与主线程预算。",
+    "跨骨架泛化、retarget 后质量，以及网络产物跨 UE 版本兼容性。",
+  ]}
+/>
+
+## 工程结论
+
+这次实验最重要的结果不是一段“角色动起来”的 demo，而是把 AnimGen 的真实工程边界拆清楚了：
+
+1. 数据准备不是导入完成就结束，additive 类型与 skeleton 兼容必须先审计；
+2. 新 GPU 要验证真实 CUDA op，不能只看 availability flag；
+3. AutoEncoder 的重建空间和 Controller 的生成空间强耦合，重训 AE 就意味着重训 Controller；
+4. runtime 依赖每帧 ControlObject 消费循环，PIE 是训练成功之外的独立验证关；
+5. 单角色 `_Uncontrolled` 闭环证明“管线可运行”，不证明“生产可用”。
+
+下一步若继续推进，优先级应是可控 Behavior 的定量/主观 benchmark，其次才是多角色性能与工程化，而不是先追求更大的模型或分布式训练。
+
+## 延伸阅读
+
+- [PyTorch Previous Versions](https://pytorch.org/get-started/previous-versions/)
+- [Unreal Engine 5.8 Preview announcement（Epic Developer Community）](https://forums.unrealengine.com/t/unreal-engine-5-8-preview/2721597)

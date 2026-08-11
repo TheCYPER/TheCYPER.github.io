@@ -1,0 +1,16 @@
+title: Twelve Bars
+description: A browser-based virtual rhythm section for jazz and blues practice, with controllable drums, bass, chords, grooves, keys, tempo, and instrument call-and-response.
+url: https://github.com/TheCYPER/twelve-bars-jam
+repoUrl: https://github.com/TheCYPER/twelve-bars-jam
+stack:
+  - TypeScript
+  - React
+  - Web Audio API
+status: shipped
+draft: false
+featured: false
+year: 2026
+topics:
+  - Creative Coding
+  - Web Audio
+  - Music Tools

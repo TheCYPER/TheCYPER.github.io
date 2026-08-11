@@ -1,0 +1,9 @@
+title: Hardware Agent Harness
+summary: How can natural-language tasks become constrained, testable, and auditable robot skills that move from simulation through safety gates to real hardware?
+status: active
+homepage: true
+order: 1
+topics:
+  - agent-harness
+  - robotics
+  - safety

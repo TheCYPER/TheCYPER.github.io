@@ -1,0 +1,21 @@
+---
+interface Props {
+  title: string;
+  description: string;
+  href: string;
+  stack?: string[];
+  status?: string;
+}
+
+const { title, description, href, stack = [], status } = Astro.props;
+---
+
+<aside class="repo-card">
+  <div>
+    <p class="repo-card__label">Repository {status ? `· ${status}` : ""}</p>
+    <h2>{title}</h2>
+    <p>{description}</p>
+  </div>
+  {stack.length > 0 && <p class="repo-card__stack">{stack.join(" · ")}</p>}
+  <a href={href} target="_blank" rel="noreferrer">在 GitHub 查看 <span aria-hidden="true">↗</span></a>
+</aside>

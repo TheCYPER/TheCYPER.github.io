@@ -1,0 +1,32 @@
+---
+interface Props {
+  verified: string[];
+  notVerified?: string[];
+  title?: string;
+}
+
+const { verified, notVerified = [], title = "验证边界" } = Astro.props;
+---
+
+<aside class="claim-boundary" aria-label={title}>
+  <p class="claim-boundary__eyebrow">Claim boundary</p>
+  <h2>{title}</h2>
+  <div class="claim-boundary__grid">
+    <section>
+      <h3><span aria-hidden="true">✓</span> 已验证</h3>
+      <ul>
+        {verified.map((item) => <li>{item}</li>)}
+      </ul>
+    </section>
+    <section>
+      <h3><span aria-hidden="true">○</span> 尚未验证</h3>
+      {
+        notVerified.length > 0 ? (
+          <ul>{notVerified.map((item) => <li>{item}</li>)}</ul>
+        ) : (
+          <p>本次记录没有额外扩大的结论。</p>
+        )
+      }
+    </section>
+  </div>
+</aside>

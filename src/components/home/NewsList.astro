@@ -1,0 +1,29 @@
+---
+import type { CollectionEntry } from "astro:content";
+import { formatDate } from "../../utils/content";
+
+interface Props {
+  entries: CollectionEntry<"news">[];
+}
+
+const { entries } = Astro.props;
+---
+
+{entries.length > 0 && (
+  <section class="home-facts__news" aria-labelledby="news-heading">
+    <h2 id="news-heading">News</h2>
+    <ol class="news-list">
+      {
+        entries.map((entry) => (
+          <li>
+            <time datetime={entry.data.date.toISOString()}>{formatDate(entry.data.date, "en")}</time>
+            <div>
+              <h3>{entry.data.url ? <a href={entry.data.url}>{entry.data.title}</a> : entry.data.title}</h3>
+              <p>{entry.data.summary}</p>
+            </div>
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+)}

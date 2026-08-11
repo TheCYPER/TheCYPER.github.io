@@ -1,0 +1,9 @@
+title: KIMODO + VLA
+summary: Could a motion foundation model provide a semantic coarse-motion prior while a vision-language-action model handles precise grasping and local control?
+status: future
+homepage: false
+order: 5
+topics:
+  - motion-generation
+  - robotics
+  - vla

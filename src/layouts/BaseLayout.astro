@@ -1,0 +1,124 @@
+---
+import "@fontsource-variable/source-serif-4";
+import "@fontsource-variable/ibm-plex-sans";
+import "@fontsource-variable/noto-sans-sc";
+import "@fontsource-variable/noto-serif-sc";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
+import { ClientRouter } from "astro:transitions";
+import PageTransitionStage from "../components/PageTransitionStage.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import { siteConfig } from "../config/site";
+import { profile } from "../data/profile";
+import type { SupportedLanguage } from "../utils/content";
+import "../styles/global.css";
+import "../styles/transitions.css";
+
+type StructuredData = Record<string, unknown> | Record<string, unknown>[];
+
+interface Props {
+  title?: string;
+  description?: string;
+  canonicalPath?: string;
+  image?: string;
+  imageAlt?: string;
+  type?: "website" | "article";
+  language?: SupportedLanguage;
+  publishedAt?: Date;
+  updatedAt?: Date;
+  noindex?: boolean;
+  structuredData?: StructuredData;
+}
+
+const {
+  title,
+  description = siteConfig.description,
+  canonicalPath = Astro.url.pathname,
+  image = siteConfig.socialImage,
+  imageAlt = siteConfig.socialImageAlt,
+  type = "website",
+  language = siteConfig.defaultLanguage,
+  publishedAt,
+  updatedAt,
+  noindex = false,
+  structuredData,
+} = Astro.props;
+
+const pageTitle = title ? `${title} — ${siteConfig.shortTitle}` : siteConfig.title;
+const canonical = new URL(canonicalPath, Astro.site ?? siteConfig.siteUrl);
+const socialImage = new URL(image, Astro.site ?? siteConfig.siteUrl);
+const ogLocale = language === "zh-CN" ? "zh_CN" : "en_US";
+const defaultStructuredData =
+  type === "article"
+    ? {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        headline: title,
+        description,
+        inLanguage: language,
+        datePublished: publishedAt?.toISOString(),
+        dateModified: (updatedAt ?? publishedAt)?.toISOString(),
+        author: {
+          "@type": "Person",
+          name: profile.name,
+          url: profile.links.github,
+        },
+        mainEntityOfPage: canonical.href,
+      }
+    : {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        name: siteConfig.title,
+        description: siteConfig.description,
+        inLanguage: language,
+        url: siteConfig.siteUrl,
+        author: {
+          "@type": "Person",
+          name: profile.name,
+          url: profile.links.github,
+        },
+      };
+const jsonLd = structuredData ?? defaultStructuredData;
+---
+
+<!doctype html>
+<html lang={language}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content={siteConfig.themeColor} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="canonical" href={canonical.href} />
+    <link rel="alternate" type="application/rss+xml" title={`${siteConfig.shortTitle} RSS`} href={siteConfig.rssPath} />
+    <meta property="og:type" content={type} />
+    <meta property="og:locale" content={ogLocale} />
+    <meta property="og:site_name" content={siteConfig.title} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical.href} />
+    <meta property="og:image" content={socialImage.href} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={imageAlt} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImage.href} />
+    {publishedAt && <meta property="article:published_time" content={publishedAt.toISOString()} />}
+    {updatedAt && <meta property="article:modified_time" content={updatedAt.toISOString()} />}
+    <title>{pageTitle}</title>
+    <ClientRouter fallback="swap" />
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)}></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">{language === "zh-CN" ? "跳到正文" : "Skip to content"}</a>
+    <PageTransitionStage />
+    <SiteHeader />
+    <main id="main-content"><slot /></main>
+    <SiteFooter />
+  </body>
+</html>

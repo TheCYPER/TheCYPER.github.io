@@ -1,0 +1,9 @@
+title: Controllable 3D Motion Generation
+summary: Can video-style generation be reframed as generating editable 3D skeleton motion first, then rendering in Blender or Maya for clearer spatial and temporal control?
+status: future
+homepage: false
+order: 4
+topics:
+  - motion-generation
+  - controllability
+  - 3d-animation

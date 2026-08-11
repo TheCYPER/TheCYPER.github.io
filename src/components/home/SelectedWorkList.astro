@@ -1,0 +1,48 @@
+---
+import type { LongformEntry } from "../../utils/content";
+import { contentHref, contentTypeLabel } from "../../utils/content";
+import WorkDiagram from "./WorkDiagram.astro";
+
+interface Props {
+  entries: LongformEntry[];
+}
+
+const { entries } = Astro.props;
+---
+
+<section aria-labelledby="selected-work-heading">
+  <header class="home-section-heading">
+    <p class="eyebrow">Evidence, not a publication list</p>
+    <h2 id="selected-work-heading">Selected work</h2>
+  </header>
+  <ol class="selected-work-list">
+    {
+      entries.map((entry, index) => (
+        <li>
+          <span class="selected-work-list__index" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+          <div class="selected-work-list__body">
+            <div class="selected-work-list__copy">
+              <p class="selected-work-list__type">{contentTypeLabel(entry)}</p>
+              <h3><a href={contentHref(entry)}>{entry.data.homepage!.title}</a></h3>
+              <p>{entry.data.homepage!.description}</p>
+            </div>
+            <WorkDiagram
+              kind={entry.data.homepage!.visual}
+              caption={entry.data.homepage!.visualCaption}
+              id={`selected-work-${index + 1}-${entry.data.homepage!.visual}`}
+            />
+          </div>
+          <a class="selected-work-list__link" href={contentHref(entry)} aria-label={`Read ${entry.data.homepage!.title}`}>Read <span aria-hidden="true">→</span></a>
+        </li>
+      ))
+    }
+  </ol>
+</section>
+
+<style>
+  .selected-work-list__copy > p:not(.selected-work-list__type) {
+    max-width: 60rem;
+    margin-top: 0.55rem;
+    color: var(--muted);
+  }
+</style>

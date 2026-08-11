@@ -1,0 +1,226 @@
+---
+title: "重建 KIMODO Fine-tuning Pipeline：Inter-X、LoRA 与一个没有通过质量 Gate 的实验"
+description: "一份 research field note：从双人 Inter-X 到单人 SOMA motion、三栏 QA、LoRA checkpoint selection 与 fixed-seed A/B，并保留 aggregate 改善掩盖 punch 退化的负结果。"
+publishedAt: 2026-07-15
+draft: true
+publicationState: planned-after-claim-and-rights-review
+language: zh-CN
+series:
+  id: kimodo-research-program
+  order: 3
+collection: ai-animation
+topics:
+  - text-to-motion
+  - fine-tuning
+  - LoRA
+  - Inter-X
+featured: false
+experiment:
+  period: "2026-07-14 — 2026-07-15"
+  software:
+    - NVIDIA KIMODO
+    - PyTorch / LoRA
+    - Inter-X / SOMA-X
+    - LLM2Vec
+  hardware:
+    - 单 GPU research environment；本文报告质量 gate，不作跨硬件吞吐结论
+verification:
+  verified:
+    - "完成从 Inter-X actor/reactor extraction、SOMA conversion、SOMA30 features 到 LoRA training 的独立研究链路"
+    - "首版 numerical reconstruction gate 通过但 semantic/visual QA 无效；数据被冻结并重建三栏人工 QA"
+    - "5000-step schedule 在 step-001750 首次通过 80% overfit loss gate；未选中的 step-005000 最终 loss 下降 88.48%"
+    - "选中 step-001750 的正式 6-prompt × 8-seed、96-video A/B 中 aggregate foot-skate 改善 1.87%，punch 恶化 24.17%"
+  notVerified:
+    - "semantic blind review 已完成或 candidate 达到计划中的 blind-review win-rate gate"
+    - "step-001750 已成为验收、发布或 production-ready Adapter"
+    - "8-clip Stage 0 结果可外推到广泛动作类别或商业场景"
+    - "Inter-X、checkpoint、Meta Llama 与 LLM2Vec 的发布级 rights review 已全部完成"
+licenses:
+  - asset: Article text, original text diagrams and aggregate tables
+    status: owned
+  - asset: Inter-X dataset and annotations
+    status: linked-only
+    note: "本地实验按 research_noncommercial 边界运行；记录为 CC-BY-NC-SA，但发布前仍需对准确版本与官方许可来源做 fresh review。"
+  - asset: NVIDIA KIMODO source code
+    status: linked-only
+    note: "官方源码为 Apache-2.0；本文不再分发代码。"
+  - asset: NVIDIA Kimodo-SOMA-RP-v1.1 checkpoint
+    status: linked-only
+    note: "Checkpoint 使用 NVIDIA Open Model License Agreement；本文不分发 base 或 Adapter weights。"
+  - asset: Meta Llama 3 text-encoder dependency
+    status: linked-only
+    note: "发布前需要单独完成 model-license review。"
+  - asset: LLM2Vec source, base and adapter components
+    status: linked-only
+    note: "发布前需要分别完成 source 与 model-license review。"
+kind: field-note
+difficulty: advanced
+prerequisites:
+  - "理解 text-to-motion、Skeleton Retarget 与 motion feature 的基本概念"
+  - "了解 PyTorch training loop、LoRA 与 fixed-seed A/B"
+---
+
+import { Callout, ClaimBoundary, ExperimentCard } from "../../components/mdx";
+
+这不是一篇“成功微调 KIMODO”的文章。它记录的是一次更有价值的负结果：我用公开组件独立重建了一条 LoRA research pipeline，训练 loss 通过了预设 gate，aggregate foot-skate 也略有改善；但单独看 punch，动作质量反而恶化 **24.17%**。语义盲评尚未完成，因此 candidate 不能被称为 accepted Adapter。
+
+这里的“重建”也有严格含义：它是基于公开 KIMODO components 设计的独立训练链，不是对 NVIDIA 未公开 training pipeline 的复现。KIMODO 本身的能力与 Prompt/Constraint 边界见 [系列第一篇](/work/kimodo-capability-boundaries/)。
+
+<ExperimentCard
+  period="2026-07-14 — 2026-07-15"
+  software={["NVIDIA KIMODO", "PyTorch / LoRA", "Inter-X / SOMA-X", "LLM2Vec"]}
+  hardware={["单 GPU research environment；吞吐不是本轮结论"]}
+  conditions={[
+    "Stage 0 只有 8 条 research-only motion，目标是验证 pipeline 与 overfit capability，不是证明泛化",
+    "checkpoint selection 先看 loss gate，再看 fixed-seed motion-quality gate",
+    "正文只报告 aggregate 或 per-prompt 指标，不公开 source caption、clip ID、seed、盲评顺序或媒体索引",
+  ]}
+  title="实验范围"
+/>
+
+<ClaimBoundary
+  verified={[
+    "Inter-X pair → actor/reactor → SOMA77 → SOMA30 feature → LoRA 的独立工程链",
+    "v0 QA incident、数据冻结与三栏 QA 重建",
+    "step-001750 首次通过 80% overfit loss gate，并被选入正式 A/B",
+    "正式 96-video A/B 的 aggregate 与 per-prompt 自动指标",
+  ]}
+  notVerified={[
+    "NVIDIA 官方训练 recipe 被复现",
+    "8 条 Stage 0 数据证明了模型泛化能力",
+    "semantic blind review 已完成",
+    "candidate Adapter 可以发布、商用或进入 production",
+  ]}
+/>
+
+## 先把问题说窄：这是 pipeline reconstruction
+
+公开 KIMODO repository 提供 inference 相关组件，但没有发布完整 training recipe。本实验自己定义了数据契约、text embedding、LoRA target modules、checkpoint gate 与 A/B protocol。因此能被验证的是“这些公开组件可以组成一条可训练的研究链”，而不是“这就是 NVIDIA 训练 KIMODO 的方法”。
+
+研究链路如下：
+
+```text
+Inter-X two-person motion
+        │ split actor / reactor
+        ▼
+three-view semantic + retarget QA
+        │ human approval gate
+        ▼
+SOMA-X fitting → SOMA77 motion
+        │ feature contract
+        ▼
+SOMA30 motion features + text embedding
+        │
+        ▼
+body-only LoRA training
+        │
+        ▼
+loss gate → checkpoint selection → fixed-seed A/B
+```
+
+每个箭头都是独立 gate。source motion 可读，不等于拆成单人后语义仍成立；SOMA reconstruction 数值误差小，不等于手脚方向视觉正确；loss 降得快，也不等于生成动作更好。
+
+## Data gate：双人交互不能直接变成单人 caption
+
+[Inter-X](https://liangxuy.github.io/inter-x/) 提供双人交互动作与细粒度描述，但 KIMODO 当前 authoring target 是单人 motion。拆 actor / reactor 后，`hit`、`block`、`knock over` 等语义可能失去对手与接触时机；原始双人 caption 里的指代也不能直接成为单人训练文本。
+
+Stage 0 最终只有 8 条 research motion：6 条经过人工确认，另外 2 条由 agent visual screening 单独标记。这个规模只能测试 pipeline 是否能拟合一个极小集合，不能作为领域泛化或数据充分性的证据。
+
+许可 gate 更早执行。本地 run 以 `research_noncommercial` profile 运行，商业 profile 在加载 GPU 模型前拒绝继续。由于当前公开项目页没有给出足够明确的、可对应本地准确数据版本的许可文本，文章发布前仍需重新确认 Inter-X 的 authoritative license source。实验记录中的许可标签不能替代 fresh rights review。
+
+## 一次必须保留的 QA 事故
+
+v0 pipeline 的 numerical reconstruction gate 一度显示通过，但人工查看后首批 20/20 全部被拒绝。问题不是一个阈值，而是多个契约同时失效：
+
+- actor / reactor mapping 存在误读，可能选择错误交互方；
+- 自动 caption template 会描述画面中并未发生的单人动作；
+- 单人叠加预览切断了原始双人语义，也难以检查接触；
+- mean reconstruction error 掩盖了手、腕、脚与 toe 的局部翻转；
+- “数值转换通过”曾被误当成“可以训练”。
+
+旧 manifest 因此被冻结，不进入训练。v1 把 QA 重建成三栏同步对照：
+
+| 视图 | 回答的问题 |
+|---|---|
+| 完整双人 source | 原动作、交互角色与原始描述是否一致？ |
+| 真正待训练的单人 source | 去掉对手后，动作语义是否仍清楚？ |
+| 保存后的 SOMA reconstruction | Retarget 是否保持 torso、limb、endpoint 与 root/floor 关系？ |
+
+只有 source semantics、single-person usefulness、retarget quality 与新的 single-person caption 都被明确批准，motion 才能进入 training manifest。
+
+<Callout type="failure" title="数值 gate 通过，仍然可能是无效数据">
+  一个被大关节数量平均后的 reconstruction error，无法替代语义与局部末端检查。v0 最重要的产物不是 238 条数值通过记录，而是证明这批记录因为 QA contract 错误必须作废。
+</Callout>
+
+## LoRA Stage 0：先证明可拟合，再证明值得保留
+
+Stage 0 使用 body-only LoRA，并保持 base checkpoint 不变。1000-step 首轮把固定 validation loss 从 `0.083366` 降到 `0.028652`，下降 **65.63%**，没有达到预设的 80% overfit gate。
+
+随后运行一条独立的 5000-step schedule。checkpoint 结论必须拆开：
+
+| Checkpoint | Validation-loss reduction | 决策 |
+|---|---:|---|
+| 1000-step 首轮终点 | 65.63% | 未过 80% gate |
+| `step-001750` | 80.90% | 首次过 gate；选作正式 A/B candidate |
+| `step-005000` | 88.48% | schedule 最终点；未被选中，只保留为 overfit control |
+
+`step-005000` 的 loss 更低，但 preliminary A/B 出现了更多单类 foot-skate 退化。它没有进入后面的正式 8-seed A/B。把 88.48% 写到 `step-001750`，或把正式 A/B 指标归给 `step-005000`，都会混淆两个不同问题。
+
+## 正式 A/B：aggregate 通过，严格 gate 失败
+
+正式评估只使用选中的 `step-001750`：6 个 Prompt、每个 8 个固定 seed，分别生成 base 与 Adapter，共 **96 个内部评测视频 / 48 个 A/B pair**。这些媒体、左右盲序与 seed 不公开；这里只保留不能反推源素材的指标。
+
+| Aggregate metric | Base | `step-001750` Adapter | 解释 |
+|---|---:|---:|---|
+| foot-skate | 0.08404 m/s | 0.08246 m/s | 改善 1.87% |
+| root displacement | 0.67095 m | 0.62632 m | 略降；body-only LoRA 未训练 root branch |
+| peak joint velocity | 5.68943 m/s | 5.78657 m/s | 上升 1.71%，没有数值爆炸 |
+
+如果只读第一行，很容易写成“Adapter 改善了 motion quality”。但逐 Prompt gate 给出了不同答案：punch 的 foot-skate ratio 为 `1.242`，即恶化 **24.17%**，超过了“单类不得恶化 20% 以上”的上限。因此 aggregate gate 通过，per-prompt gate 与最终严格 motion-quality gate 都失败。
+
+<Callout type="finding" title="Checkpoint selection 不是找最小 loss">
+  训练 loss、aggregate motion metric、worst-class regression 与 semantic preference 是四种不同证据。只优化前两项，会把 punch 这样的局部失败平均掉。
+</Callout>
+
+## 当前 Gate 状态
+
+| Gate | 状态 | 证据边界 |
+|---|---|---|
+| Training engineering | 通过 | 完整 schedule 可运行，Adapter 可保存/重载，base 保持不变 |
+| 8-clip overfit loss | 通过 | `step-001750` 首次超过 80%；`step-005000` 最终 88.48% |
+| Automatic motion quality | **未通过** | Aggregate 改善 1.87%，但 punch 恶化 24.17% |
+| Semantic blind review | **未完成** | 48 个 pair 已准备，尚无完成的人类 preference result |
+| Accepted Adapter | **未通过** | 当前只有 candidate checkpoint，不是发布权重 |
+
+Stage 1 也不应启动。除了需要更多人工 QA motion，还要先回答极小数据是否能为 punch 提供稳定收益，或是否需要重新平衡采样、扩充动作多样性并修改 loss design。
+
+## Appendix：可公开的 per-prompt 自动指标
+
+以下只保留 `step-001750` 正式评估的 Adapter / base foot-skate ratio；小于 1 表示改善，大于 1 表示恶化。它不包含 Prompt 原文、seed、clip ID、文件名或媒体索引。
+
+| Motion class | Ratio | Gate |
+|---|---:|---|
+| block | 0.766 | 通过 |
+| dodge | 0.953 | 通过 |
+| hit reaction | 0.966 | 通过 |
+| kick | 0.985 | 通过 |
+| knockdown | 1.067 | 通过 |
+| punch | 1.242 | **失败** |
+
+## 为什么本文仍是 Draft
+
+技术结论已经足够明确，发布合同仍不完整：
+
+1. Inter-X 的准确数据版本与 authoritative license source 需要 fresh review。
+2. KIMODO checkpoint、Meta Llama 3 与 LLM2Vec 的 model/source terms 需要分别审计。
+3. 还需从受限原结果生成 public-safe machine-readable aggregate snapshot 与 checksum；不能把原始 evaluation package 直接放进公开仓库。
+4. Semantic blind review 未完成，任何“Adapter 提升语义质量”的表述都没有证据。
+
+本文不分发 Inter-X media、annotation、reconstruction、Adapter weights、feature cache、评测视频、blind key、reviewer database 或可重建媒体顺序。只有当 claim review、article-level rights review 与 restricted-asset history scan 全部完成，`publicationState` 才能改变。
+
+## 上游链接
+
+- [NVIDIA KIMODO project](https://research.nvidia.com/labs/sil/projects/kimodo/)
+- [KIMODO source license](https://github.com/nv-tlabs/kimodo/blob/main/LICENSE)
+- [Kimodo-SOMA-RP-v1.1 model card](https://huggingface.co/nvidia/Kimodo-SOMA-RP-v1.1)
+- [Inter-X project page](https://liangxuy.github.io/inter-x/)

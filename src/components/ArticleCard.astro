@@ -1,0 +1,36 @@
+---
+import type { LongformEntry } from "../utils/content";
+import {
+  contentHref,
+  contentTypeLabel,
+  formatDate,
+  readingTime,
+} from "../utils/content";
+
+interface Props {
+  entry: LongformEntry;
+  order?: number;
+}
+
+const { entry, order } = Astro.props;
+const href = contentHref(entry);
+const minutes = readingTime(entry.body);
+---
+
+<article class="article-card article-card--row">
+  {order && <span class="article-card__index" aria-hidden="true">{String(order).padStart(2, "0")}</span>}
+  <div class="article-card__meta" lang="en">
+    <span>{contentTypeLabel(entry)}</span>
+    <span>{formatDate(entry.data.publishedAt, "en")}</span>
+  </div>
+  <div class="article-card__copy" lang={entry.data.language}>
+    <h2><a href={href}>{entry.data.title}</a></h2>
+    <p>{entry.data.description}</p>
+  </div>
+  <div class="article-card__footer" lang="en">
+    <ul class="tag-list" aria-label="Topics">
+      {entry.data.topics.slice(0, 3).map((topic) => <li>{topic}</li>)}
+    </ul>
+    <span>{minutes} min</span>
+  </div>
+</article>

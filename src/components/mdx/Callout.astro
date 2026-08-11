@@ -1,0 +1,19 @@
+---
+interface Props {
+  type?: "warning" | "finding" | "failure" | "takeaway";
+  title?: string;
+}
+
+const { type = "finding", title } = Astro.props;
+const labels = {
+  warning: "注意",
+  finding: "发现",
+  failure: "失败记录",
+  takeaway: "结论",
+};
+---
+
+<aside class:list={["callout", `callout--${type}`]}>
+  <p class="callout__label">{title ?? labels[type]}</p>
+  <div class="callout__body"><slot /></div>
+</aside>

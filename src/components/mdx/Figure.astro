@@ -1,0 +1,100 @@
+---
+interface Props {
+  src: string;
+  reducedMotionSrc?: string;
+  alt: string;
+  caption: string;
+  width?: number;
+  height?: number;
+  credit?: string;
+  creditHref?: string;
+  license?: string;
+  licenseHref?: string;
+  href?: string;
+  linkLabel?: string;
+  wide?: boolean;
+}
+
+const {
+  src,
+  reducedMotionSrc,
+  alt,
+  caption,
+  width,
+  height,
+  credit,
+  creditHref,
+  license,
+  licenseHref,
+  href,
+  linkLabel,
+  wide = false,
+} = Astro.props;
+
+const hasAttribution = Boolean(credit || license);
+const imageLinkLabel = linkLabel ? `${linkLabel} (opens in a new tab)` : undefined;
+---
+
+<figure
+  class:list={[
+    "content-figure",
+    {
+      "content-figure--wide": wide,
+      "content-figure--motion-fallback": Boolean(reducedMotionSrc),
+    },
+  ]}
+>
+  {
+    href ? (
+      <a href={href} target="_blank" rel="noreferrer noopener" aria-label={imageLinkLabel}>
+        <picture>
+          {reducedMotionSrc && (
+            <source media="(prefers-reduced-motion: reduce)" srcset={reducedMotionSrc} />
+          )}
+          <img
+            src={src}
+            alt={alt}
+            width={width}
+            height={height}
+            loading="lazy"
+            decoding="async"
+          />
+        </picture>
+        {!linkLabel && <span class="visually-hidden"> (opens in a new tab)</span>}
+      </a>
+    ) : (
+      <picture>
+        {reducedMotionSrc && (
+          <source media="(prefers-reduced-motion: reduce)" srcset={reducedMotionSrc} />
+        )}
+        <img
+          src={src}
+          alt={alt}
+          width={width}
+          height={height}
+          loading="lazy"
+          decoding="async"
+        />
+      </picture>
+    )
+  }
+  <figcaption>
+    <span class="content-figure__caption">{caption}</span>
+    {hasAttribution && (
+      <span class="content-figure__credit">
+        {credit && (
+          <span class="content-figure__meta-item">
+            <span class="content-figure__meta-label">Credit:</span>{" "}
+            {creditHref ? <a href={creditHref}>{credit}</a> : credit}
+          </span>
+        )}
+        {license && (
+          <span class="content-figure__meta-item">
+            <span class="content-figure__meta-label">License:</span>{" "}
+            {licenseHref ? <a href={licenseHref} rel="license">{license}</a> : license}
+          </span>
+        )}
+      </span>
+    )}
+  </figcaption>
+</figure>

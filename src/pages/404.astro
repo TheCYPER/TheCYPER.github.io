@@ -1,0 +1,14 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="Page not found" description="The requested page does not exist." canonicalPath="/404.html" noindex>
+  <section class="not-found shell">
+    <div>
+      <p class="not-found__code">404</p>
+      <h1>This path does not exist.</h1>
+      <p>The link may have changed, or the idea may not yet have enough evidence to become a public page.</p>
+      <a class="text-link" href="/">Return home <span aria-hidden="true">→</span></a>
+    </div>
+  </section>
+</BaseLayout>

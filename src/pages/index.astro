@@ -1,0 +1,99 @@
+---
+import { getCollection } from "astro:content";
+import CurrentQuestions from "../components/home/CurrentQuestions.astro";
+import NewsList from "../components/home/NewsList.astro";
+import ProfileHero from "../components/home/ProfileHero.astro";
+import SelectedWorkList from "../components/home/SelectedWorkList.astro";
+import { siteConfig } from "../config/site";
+import { profile } from "../data/profile";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import "../styles/home.css";
+import type { LongformEntry } from "../utils/content";
+import {
+  selectHomepageLongform,
+  selectHomepageQuestions,
+  selectPublishedNews,
+} from "../utils/home";
+
+const [caseStudies, articles, researchQuestions, news] = await Promise.all([
+  getCollection("case-studies"),
+  getCollection("articles"),
+  getCollection("research-questions"),
+  getCollection("news"),
+]);
+
+const selectedWork = selectHomepageLongform([
+  ...caseStudies,
+  ...articles,
+] as LongformEntry[]);
+const currentQuestions = selectHomepageQuestions(researchQuestions);
+const publishedNews = selectPublishedNews(news);
+const profilePageData = {
+  "@context": "https://schema.org",
+  "@type": "ProfilePage",
+  name: siteConfig.title,
+  description: siteConfig.description,
+  url: siteConfig.siteUrl,
+  inLanguage: "en",
+  mainEntity: {
+    "@type": "Person",
+    name: profile.name,
+    alternateName: [profile.shortName, profile.chineseName, `@${profile.handle}`],
+    pronouns: profile.pronouns,
+    description: profile.identityLine,
+    email: `mailto:${profile.links.email}`,
+    affiliation: {
+      "@type": "CollegeOrUniversity",
+      name: "Mohamed bin Zayed University of Artificial Intelligence",
+    },
+    sameAs: [profile.links.github, profile.links.linkedin],
+  },
+};
+---
+
+<BaseLayout structuredData={profilePageData}>
+  <ProfileHero profile={profile} />
+
+  <div class="home-content shell">
+    <CurrentQuestions
+      questions={currentQuestions}
+      eyebrow="Questions under active investigation"
+      heading="Current questions"
+      id="current-questions-heading"
+    />
+
+    <SelectedWorkList entries={selectedWork} />
+
+    <div class:list={["home-facts", { "home-facts--education-only": publishedNews.length === 0 }]}>
+      <section class="home-facts__education" aria-labelledby="education-heading">
+        <h2 id="education-heading">Education</h2>
+        <ol>
+          {
+            profile.education.map((item) => (
+              <li>
+                <p class="home-facts__period">{item.period}</p>
+                <div>
+                  <h3>{item.institution}</h3>
+                  <p>{item.program}</p>
+                  <p>{item.detail}</p>
+                </div>
+              </li>
+            ))
+          }
+        </ol>
+      </section>
+      <NewsList entries={publishedNews} />
+    </div>
+
+    <section class="personal-note" aria-labelledby="personal-note-heading">
+      <p class="eyebrow">Beyond the build log</p>
+      <h2 id="personal-note-heading">A personal note</h2>
+      <p>
+        Outside research and engineering, I keep returning to {profile.interests.join(", ")}. I am especially interested in conversations that connect technical systems with how people learn, create, and organize.
+      </p>
+      <p>
+        The easiest way to reach me is <a href={`mailto:${profile.links.email}`}>{profile.links.email}</a>. You can also find my public work on <a href={profile.links.github} target="_blank" rel="noreferrer">GitHub</a> and connect on <a href={profile.links.linkedin} target="_blank" rel="noreferrer">LinkedIn</a>.
+      </p>
+    </section>
+  </div>
+</BaseLayout>
