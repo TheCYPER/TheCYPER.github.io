@@ -72,6 +72,18 @@ if (entry.data.series) {
       {visibleHeadings.length > 0 && (
         <aside class="article-sidebar" lang={entry.data.language}>
           <div class="article-sidebar__inner table-of-contents">
+            <nav class="table-of-contents__desktop" aria-label={isChinese ? "本文目录" : "On this page"}>
+              <h2>{isChinese ? "本文目录" : "On this page"}</h2>
+              <ol>
+                {
+                  visibleHeadings.map((heading) => (
+                    <li data-depth={heading.depth}>
+                      <a href={`#${heading.slug}`}>{heading.text}</a>
+                    </li>
+                  ))
+                }
+              </ol>
+            </nav>
             <details class="table-of-contents__details">
               <summary>
                 <span>{isChinese ? "目录" : "Contents"}</span>

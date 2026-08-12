@@ -922,12 +922,8 @@
     list-style: none;
   }
 
-  .table-of-contents__details > summary {
+  .table-of-contents__details {
     display: none;
-  }
-
-  .table-of-contents__details:not([open]) > :not(summary) {
-    display: block;
   }
 
   .table-of-contents a {
@@ -1394,6 +1390,14 @@
 
   .table-of-contents {
     border-block: 1px solid var(--rule-strong);
+  }
+
+  .table-of-contents__desktop {
+    display: none;
+  }
+
+  .table-of-contents__details {
+    display: block;
   }
 
   .table-of-contents__details > summary {
