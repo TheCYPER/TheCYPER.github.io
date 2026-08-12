@@ -30,6 +30,12 @@ const approvedSameAs = [
   "https://github.com/TheCYPER",
   "https://linkedin.com/in/che-percy-liu",
 ];
+const expectedAiAnimationEntries = [
+  "/work/kimodo-capability-boundaries/",
+  "/work/robust-motion-in-between/",
+  "/writing/ai-animation-technology-map/",
+  "/work/animgen-runtime-pose-generation/",
+];
 
 function pageUrl(file) {
   const relative = toPosixPath(path.relative(distRoot, file));
@@ -125,6 +131,31 @@ for (const file of htmlFiles) {
   }
 
   if (/AI Research Lab|Evidence Index/i.test(source)) fail(url, "retired site branding leaked into output");
+
+  if (url === "/research/ai-animation/") {
+    const cards = [...source.matchAll(
+      /<article class="[^"]*\barticle-card--row\b[^"]*">([\s\S]*?)<\/article>/gi,
+    )].map((match) => match[1]);
+
+    if (cards.length !== expectedAiAnimationEntries.length) {
+      fail(url, `expected ${expectedAiAnimationEntries.length} linked archive rows, found ${cards.length}`);
+    }
+
+    const cardLinks = cards.map((card) => {
+      const anchorAttributes = card.match(/<a\b([^>]*)>/i)?.[1] ?? "";
+      const href = anchorAttributes.match(/\bhref="([^"]+)"/i)?.[1];
+      const classes = (anchorAttributes.match(/\bclass="([^"]+)"/i)?.[1] ?? "").split(/\s+/);
+      return { href, hasRowLinkClass: classes.includes("article-card__link") };
+    });
+
+    if (JSON.stringify(cardLinks.map(({ href }) => href)) !== JSON.stringify(expectedAiAnimationEntries)) {
+      fail(url, `archive row links must be ${expectedAiAnimationEntries.join(", ")}`);
+    }
+
+    cardLinks.forEach(({ href, hasRowLinkClass }) => {
+      if (!hasRowLinkClass) fail(url, `${href ?? "unknown entry"} does not expose the full-row link target`);
+    });
+  }
 }
 
 const actualHtmlRoutes = htmlFiles.map(pageUrl).sort();
