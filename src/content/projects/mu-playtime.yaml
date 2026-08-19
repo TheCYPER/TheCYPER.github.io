@@ -1,0 +1,17 @@
+title: MuPlaytime
+description: A bilingual, timezone-aware coordination board for comparing friends' availability, proposing game sessions, voting on options, and joining shared rooms without accounts.
+url: https://thecyper.github.io/MuPlaytime/
+repoUrl: https://github.com/TheCYPER/MuPlaytime
+stack:
+  - TypeScript
+  - React
+  - Supabase
+  - Temporal API
+status: shipped
+draft: false
+featured: false
+year: 2026
+topics:
+  - Social Scheduling
+  - Time Zones
+  - Game Coordination
