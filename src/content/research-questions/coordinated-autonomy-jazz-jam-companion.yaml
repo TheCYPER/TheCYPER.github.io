@@ -1,6 +1,6 @@
 title: Coordinated Autonomy for a Jazz Jam Companion
 summary: In a fixed-form live Jazz jam, can AI piano, bass, and drums make bounded local decisions from shared musical state and respond to a human saxophonist more naturally than static or centrally scripted accompaniment, without reducing ensemble coherence or human control?
-status: active
+status: building
 homepage: false
 order: 6
 topics:

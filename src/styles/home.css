@@ -230,6 +230,20 @@
     font-size: clamp(2.35rem, 5vw, 4.6rem);
   }
 
+  .question-section__description {
+    max-width: 32rem;
+    color: var(--muted);
+  }
+
+  .question-section--building .home-section-heading .eyebrow,
+  .question-section--building .question-list__index {
+    background: var(--teal);
+  }
+
+  .question-section--building .question-list {
+    border-top-color: var(--teal-ink);
+  }
+
   .question-list,
   .selected-work-list,
   .news-list,

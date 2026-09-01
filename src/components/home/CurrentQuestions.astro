@@ -6,15 +6,21 @@ interface Props {
   eyebrow?: string;
   heading: string;
   id: string;
+  description?: string;
+  tone?: "default" | "building";
 }
 
-const { questions, eyebrow, heading, id } = Astro.props;
+const { questions, eyebrow, heading, id, description, tone = "default" } = Astro.props;
 ---
 
-<section class="question-section" aria-labelledby={id}>
+<section
+  class:list={["question-section", tone === "building" && "question-section--building"]}
+  aria-labelledby={id}
+>
   <header class="home-section-heading">
     {eyebrow && <p class="eyebrow">{eyebrow}</p>}
     <h2 id={id}>{heading}</h2>
+    {description && <p class="question-section__description">{description}</p>}
   </header>
   <ol class="question-list">
     {

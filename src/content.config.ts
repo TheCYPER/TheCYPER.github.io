@@ -162,7 +162,7 @@ const researchQuestions = defineCollection({
   schema: z.object({
     title: z.string().min(1),
     summary: z.string().min(1),
-    status: z.enum(["active", "future", "archived"]),
+    status: z.enum(["building", "active", "future", "archived"]),
     homepage: z.boolean().default(false),
     order: z.number().int().positive(),
     topics: z.array(z.string().min(1)).min(1),

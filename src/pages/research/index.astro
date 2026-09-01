@@ -15,6 +15,9 @@ const [tracks, questions, caseStudies, articles] = await Promise.all([
 ]);
 const allContent = [...caseStudies, ...articles];
 const orderedTracks = [...tracks].sort((left, right) => right.data.order - left.data.order);
+const buildingQuestions = questions
+  .filter(({ data }) => data.status === "building")
+  .sort((left, right) => left.data.order - right.data.order);
 const currentQuestions = questions
   .filter(({ data }) => data.status === "active")
   .sort((left, right) => left.data.order - right.data.order);
@@ -23,15 +26,23 @@ const futureQuestions = questions
   .sort((left, right) => left.data.order - right.data.order);
 ---
 
-<BaseLayout title="Research" description="Current research questions and evidence archives across agents, motion, robotics, and agent-native systems.">
+<BaseLayout title="Research" description="Research builds, open questions, future directions, and evidence archives across agents, motion, robotics, and interactive systems.">
   <PageHeader
     eyebrow="Questions before claims"
     title="Research"
-    description="Open questions stay separate from completed evidence. They become links only when there is enough work to inspect."
+    description="Active builds, open questions, future directions, and completed evidence stay visibly separate."
     count={questions.length}
   />
 
   <div class="research-questions shell">
+    <CurrentQuestions
+      questions={buildingQuestions}
+      eyebrow="In active implementation"
+      heading="Research builds"
+      id="research-building-heading"
+      description="Research questions that have moved into implementation, while their systems, evaluations, and findings remain unfinished."
+      tone="building"
+    />
     <CurrentQuestions
       questions={currentQuestions}
       eyebrow="In active investigation"
