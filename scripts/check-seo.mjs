@@ -11,6 +11,7 @@ const expectedPublicRoutes = [
   "/projects/",
   "/research/",
   "/research/ai-animation/",
+  "/research/coordinated-autonomy-jazz-jam-companion/",
   "/work/",
   "/work/animgen-runtime-pose-generation/",
   "/work/kimodo-capability-boundaries/",

@@ -323,10 +323,12 @@
     text-decoration: none;
   }
 
+  .question-list h3 a,
   .selected-work-list h3 a {
     transition: color 150ms ease, text-decoration-color 150ms ease;
   }
 
+  .question-list h3 a:hover,
   .selected-work-list h3 a:hover {
     color: var(--primary);
     text-decoration: underline;

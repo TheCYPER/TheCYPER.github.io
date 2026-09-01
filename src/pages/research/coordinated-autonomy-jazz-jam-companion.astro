@@ -1,0 +1,924 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+const title = "Coordinated Autonomy for a Jazz Jam Companion";
+const description =
+  "An active research build testing whether AI piano, bass, and drums can make bounded local decisions from shared musical state without weakening ensemble coherence or human control.";
+
+const toc = [
+  ["question", "Research question"],
+  ["conditions", "B0 / B1 / B2"],
+  ["implementation", "Implementation sequence"],
+  ["evaluation", "Evaluation"],
+  ["scope", "Scope and claim boundary"],
+  ["relationship", "Relationship to earlier ideas"],
+];
+
+const roles = [
+  {
+    name: "Human sax",
+    role: "Default lead",
+    decisions: "Phrase, density, dynamics, register, rests, and explicit handoff.",
+    boundary: "The system observes musical behavior; it does not infer emotion or intent from hidden states.",
+  },
+  {
+    name: "AI piano",
+    role: "Comping + lead-capable",
+    decisions: "Voicing, register, syncopation, density, space, short responses, and a bounded solo role.",
+    boundary: "May exchange the lead with sax; cannot ignore the current form, harmony, or density budget.",
+  },
+  {
+    name: "AI bass",
+    role: "Support only",
+    decisions: "Walking or riff choice, approach motion, register, density, and rhythmic alignment with drums.",
+    boundary: "Anchors the form in the first study and does not take the main solo role.",
+  },
+  {
+    name: "AI drums",
+    role: "Support only",
+    decisions: "Ride or hi-hat pattern, kick and snare density, comping hits, fills, subdivision, and intensity.",
+    boundary: "Cannot change the global tempo or compete with another long fill at the same time.",
+  },
+];
+
+const conditions = [
+  {
+    code: "B0",
+    title: "Static accompaniment",
+    summary: "A fixed rhythm-section arrangement follows the lead sheet but does not react to the sax performance.",
+    test: "Separates a backing track that can play the form from a system that can actually respond.",
+  },
+  {
+    code: "B1",
+    title: "Centrally scripted adaptation",
+    summary: "One arranger maps observable sax features to whole-band states such as low, medium, or high energy.",
+    test: "Measures the value of adaptation when every machine voice still follows the same central decision.",
+  },
+  {
+    code: "B2",
+    title: "Coordinated autonomy",
+    summary: "Piano, bass, and drums choose instrument-specific actions while a coordinator enforces shared state and global guards.",
+    test: "Tests whether bounded local decision ownership feels more like an ensemble without creating more conflict.",
+  },
+];
+
+const implementationSteps = [
+  {
+    label: "Shared musical ground",
+    copy: "Build a three-track MIDI skeleton in which piano, bass, and drums read the same clock, meter, chord chart, form position, current lead, and event log.",
+  },
+  {
+    label: "Matched baselines",
+    copy: "Implement B0 first, then B1, while keeping the sound set, pattern pool, scheduling rules, and latency budget as comparable as possible.",
+  },
+  {
+    label: "Local policies and guards",
+    copy: "Add B2 policies for energy and density response plus sax-to-piano handoff. Log each proposed action, any rejected conflict, the selected fallback, and the sound that was scheduled.",
+  },
+  {
+    label: "Live pilot before claims",
+    copy: "Use a short 12-bar Jazz-blues loop for engineering smoke tests, then move to one fixed Jazz standard for a musician pilot only after the three conditions are stable and audibly distinguishable.",
+  },
+];
+
+const evaluation = [
+  {
+    title: "Responsiveness",
+    copy: "Direction and latency of each voice's response to observable changes in sax density, velocity, register, and rests; handoff and return success; missed or excessive responses.",
+  },
+  {
+    title: "Ensemble coherence",
+    copy: "Beat, harmony, and form errors; register or density collisions; simultaneous fills; deadline misses; dropouts; guard interventions; deterministic fallback rate.",
+  },
+  {
+    title: "Human control",
+    copy: "Whether musicians feel that separate voices are listening, whether the result stays predictable without becoming rigid, and whether autonomy distracts or takes away unwanted space.",
+  },
+];
+
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "CreativeWork",
+  name: title,
+  description,
+  inLanguage: "en",
+  url: "https://thecyper.github.io/research/coordinated-autonomy-jazz-jam-companion/",
+  author: {
+    "@type": "Person",
+    name: "Che (Percy) Liu",
+    url: "https://thecyper.github.io/",
+  },
+  about: ["interactive music", "human-AI interaction", "real-time systems", "Jazz"],
+};
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  canonicalPath="/research/coordinated-autonomy-jazz-jam-companion/"
+  structuredData={structuredData}
+>
+  <article class="research-detail">
+    <header class="research-detail__hero shell">
+      <div class="research-detail__topline">
+        <p class="eyebrow">Active research · implementation started</p>
+        <a href="/research/">← All research</a>
+      </div>
+
+      <div class="research-detail__hero-grid">
+        <div>
+          <h1>{title}</h1>
+          <p class="research-detail__dek">
+            In a fixed-form live Jazz jam, can AI piano, bass, and drums make bounded local decisions from shared musical state and respond to a human saxophonist more naturally than static or centrally scripted accompaniment, without reducing ensemble coherence or human control?
+          </p>
+        </div>
+
+        <dl class="research-detail__status" aria-label="Current research status">
+          <div>
+            <dt>Stage</dt>
+            <dd>Source baseline + backend bring-up</dd>
+          </div>
+          <div>
+            <dt>Setting</dt>
+            <dd>One fixed-form Jazz jam</dd>
+          </div>
+          <div>
+            <dt>Human voice</dt>
+            <dd>Saxophone or EWI</dd>
+          </div>
+          <div>
+            <dt>AI voices</dt>
+            <dd>Piano, bass, and drums</dd>
+          </div>
+          <div>
+            <dt>Updated</dt>
+            <dd><time datetime="2026-09-01">1 September 2026</time></dd>
+          </div>
+        </dl>
+      </div>
+
+      <aside class="research-detail__boundary" aria-label="Current evidence boundary">
+        <strong>Current boundary</strong>
+        <p>
+          The research has entered implementation with a pinned source baseline and partial Python/OSC bring-up. This page does not claim that B0, B1, or B2 is complete, that the full music path runs end to end, that a runnable public prototype exists, or that musician results have been collected.
+        </p>
+      </aside>
+    </header>
+
+    <figure class="ensemble-score shell" aria-labelledby="ensemble-score-title">
+      <figcaption>
+        <p class="eyebrow">System thesis</p>
+        <h2 id="ensemble-score-title">Shared score, local decisions</h2>
+        <p>
+          Coordination does not mean that one arranger chooses every note. Every voice reads the same musical ground, then acts only inside its role.
+        </p>
+      </figcaption>
+
+      <div class="ensemble-score__state">
+        <strong>Shared ensemble state</strong>
+        <ul aria-label="Shared state fields">
+          <li>clock</li>
+          <li>meter</li>
+          <li>harmony</li>
+          <li>form</li>
+          <li>current lead</li>
+          <li>energy target</li>
+          <li>density budget</li>
+        </ul>
+      </div>
+
+      <div class="ensemble-score__roles">
+        {roles.map((role) => (
+          <section class="ensemble-score__role">
+            <header>
+              <h3>{role.name}</h3>
+              <p>{role.role}</p>
+            </header>
+            <dl>
+              <div>
+                <dt>Local decisions</dt>
+                <dd>{role.decisions}</dd>
+              </div>
+              <div>
+                <dt>Role boundary</dt>
+                <dd>{role.boundary}</dd>
+              </div>
+            </dl>
+          </section>
+        ))}
+      </div>
+    </figure>
+
+    <div class="article-shell shell research-detail__body">
+      <div class="prose research-detail__prose">
+        <section aria-labelledby="question">
+          <h2 id="question">Research question</h2>
+          <p>
+            A human rhythm section shares tempo, form, harmony, and an understanding of who currently has the lead. It does not, however, behave like three copies of one central controller. A pianist may leave space, a bassist may hold the form steady, and a drummer may answer a long rest with a restrained fill. The decisions are separate, but not unbounded.
+          </p>
+          <p>
+            This project asks whether that division of decision ownership matters in a real-time AI ensemble. The independent variable is not simply which generator produces better notes. It is <strong>who owns each musical decision</strong>: a fixed arrangement, one central adaptive arranger, or three instrument-specific policies operating under shared constraints.
+          </p>
+          <blockquote>
+            Can bounded local autonomy make the rhythm section more responsive without making the ensemble less coherent or the human less in control?
+          </blockquote>
+          <p>
+            The comparison is deliberately narrow. The first study uses one human lead, three MIDI rhythm-section voices, known tempo and harmony, and one fixed form. A system that works in this setting would still not establish general Jazz understanding.
+          </p>
+        </section>
+
+        <section aria-labelledby="conditions">
+          <h2 id="conditions">Three matched conditions</h2>
+          <p>
+            B0, B1, and B2 should reuse the same lead sheet, pattern or phrase pool, sound set, clock, scheduler, and latency budget wherever possible. The goal is to compare decision structures, not three unrelated music systems.
+          </p>
+          <div class="condition-grid">
+            {conditions.map((condition) => (
+              <article class="condition-card">
+                <p class="condition-card__code">{condition.code}</p>
+                <h3>{condition.title}</h3>
+                <p>{condition.summary}</p>
+                <p class="condition-card__test"><strong>What it isolates:</strong> {condition.test}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section aria-labelledby="implementation">
+          <h2 id="implementation">Implementation sequence</h2>
+          <p>
+            Implementation starts from timing, form, and logging rather than from a large generative model. Fixed patterns, retrieval, lightweight variation, Wizard-of-Oz material, Notochord, or a Somax2 bridge can all become interchangeable backends later. They should not be allowed to change the research variable while the baselines are being built.
+          </p>
+
+          <h3>What exists now</h3>
+          <div class="implementation-evidence">
+            <article>
+              <p class="implementation-evidence__status implementation-evidence__status--recorded">Recorded</p>
+              <h4>Pinned implementation reference</h4>
+              <p>
+                The current foundation audit is bound to <a href="https://github.com/DYCI2/Somax2/releases/tag/v2.7.0">Somax2 v2.7.0</a> at commit <code>3782bbd</code>. Its source, process model, OSC routes, player lifecycle, scheduling path, and Max/Python boundary have been mapped before modifying the system.
+              </p>
+            </article>
+            <article>
+              <p class="implementation-evidence__status implementation-evidence__status--recorded">Recorded</p>
+              <h4>Partial backend bring-up</h4>
+              <p>
+                A dated local audit records Python compilation and imports, server startup, a central <code>/somax</code> request/response round trip, and creation plus initialization of a separate player-agent process. This is a partial backend check, not proof of the full musical system.
+              </p>
+            </article>
+            <article>
+              <p class="implementation-evidence__status implementation-evidence__status--open">Open</p>
+              <h4>End-to-end music path</h4>
+              <p>
+                The Max interface and DSP path, MIDI/audio rendering, the three-voice B0/B1/B2 prototype, five-minute stability, measured latency, and musician evaluation have not yet been validated end to end.
+              </p>
+            </article>
+          </div>
+          <p class="implementation-evidence__note">
+            These bring-up results were recorded in a local architecture and deployment audit on 30 August 2026; they were not rerun as part of this website update.
+          </p>
+
+          <ol class="build-sequence">
+            {implementationSteps.map((step, index) => (
+              <li>
+                <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+                <div>
+                  <h3>{step.label}</h3>
+                  <p>{step.copy}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          <aside class="research-note">
+            <p class="eyebrow">Why begin this way?</p>
+            <p>
+              If a three-voice MIDI skeleton cannot preserve the clock, form, role permissions, and deterministic fallbacks, adding vision or a more capable generator only makes failures harder to interpret. The first implementation target is an explainable research instrument, not a polished product demo.
+            </p>
+          </aside>
+        </section>
+
+        <section aria-labelledby="evaluation">
+          <h2 id="evaluation">How it will be evaluated</h2>
+          <p>
+            “It sounded good” is not enough to distinguish an interaction design from a backing track. The study therefore keeps interaction quality, ensemble stability, musical quality, and the musician's experience as separate outcomes.
+          </p>
+
+          <div class="evaluation-grid">
+            {evaluation.map((pillar) => (
+              <article>
+                <h3>{pillar.title}</h3>
+                <p>{pillar.copy}</p>
+              </article>
+            ))}
+          </div>
+
+          <h3>Two first interaction probes</h3>
+          <ul>
+            <li><strong>Energy and density response:</strong> the sax becomes denser, louder, sparser, or leaves a long rest; piano, bass, and drums should respond differently but compatibly.</li>
+            <li><strong>Sax-to-piano handoff and return:</strong> the lead moves from the human sax to AI piano and back at a musically legal point, while bass and drums maintain support.</li>
+          </ul>
+          <p>
+            The engineering pilot may use a 12-bar Jazz-blues loop because chorus boundaries are easy to inspect. The intended live pilot uses one fixed Jazz standard selected with musician input. If the project remains limited to one form, the conclusion will remain form-specific.
+          </p>
+        </section>
+
+        <section aria-labelledby="scope">
+          <h2 id="scope">Scope and claim boundary</h2>
+          <div class="scope-grid">
+            <section>
+              <p class="eyebrow">In the first study</p>
+              <ul>
+                <li>One human saxophonist or EWI player</li>
+                <li>AI piano, bass, and drums over MIDI</li>
+                <li>Known tempo, meter, harmony, clock, and form</li>
+                <li>B0, B1, and B2 under matched musical conditions</li>
+                <li>Energy response plus piano handoff and return</li>
+                <li>Replayable decisions, failures, and fallbacks</li>
+              </ul>
+            </section>
+            <section>
+              <p class="eyebrow">Not claimed</p>
+              <ul>
+                <li>A general solution for arbitrary Jazz styles or open forms</li>
+                <li>A completed or validated public prototype</li>
+                <li>Perfect real-time transcription of acoustic saxophone</li>
+                <li>Bass or drum solo autonomy in the first version</li>
+                <li>Emotion, fatigue, personality, or hidden-intent inference</li>
+                <li>A “first AI Jazz companion” novelty claim</li>
+              </ul>
+            </section>
+          </div>
+        </section>
+
+        <section aria-labelledby="relationship">
+          <h2 id="relationship">Relationship to earlier ideas</h2>
+          <p>
+            The earlier public card centered on groove and solo retrieval with bounded generative variation. Those mechanisms remain useful engineering options, but they are no longer the headline question. Retrieval or generation can supply musical candidates; coordinated autonomy decides how decision rights, constraints, and fallbacks are distributed across the ensemble.
+          </p>
+          <p>
+            Trading fours or twos also remains a useful Jazz interaction and may become a structured stress test. Sparse visual cues may later help with high-level events such as take solo, return, head, or end if music-only handoff remains ambiguous. Neither trading nor vision is required for the main B0/B1/B2 comparison.
+          </p>
+          <p>
+            This semester research project is also separate from <strong>Jammy</strong>, an earlier product idea that does not have a prototype or MVP. Research code or findings may inform a future product, but starting this implementation does not make the two projects equivalent.
+          </p>
+        </section>
+      </div>
+
+      <aside class="article-sidebar" aria-label="Page navigation">
+        <div class="article-sidebar__inner table-of-contents">
+          <nav class="table-of-contents__desktop" aria-label="On this page">
+            <h2>On this page</h2>
+            <ol>
+              {toc.map(([href, label]) => <li><a href={`#${href}`}>{label}</a></li>)}
+            </ol>
+          </nav>
+          <details class="table-of-contents__details">
+            <summary>
+              <span>Contents</span>
+              <span>{toc.length} sections</span>
+            </summary>
+            <h2>On this page</h2>
+            <ol>
+              {toc.map(([href, label]) => <li><a href={`#${href}`}>{label}</a></li>)}
+            </ol>
+          </details>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="research-detail__footer shell">
+      <div>
+        <p class="eyebrow">Living research record</p>
+        <p>This page will link runnable code, fixed configurations, latency results, and study materials only after each artifact is ready to inspect.</p>
+      </div>
+      <a href="/research/">Return to research →</a>
+    </footer>
+  </article>
+</BaseLayout>
+
+<style>
+  .research-detail__hero {
+    padding-block: clamp(3.5rem, 8vw, 7rem) clamp(2.75rem, 6vw, 5rem);
+    border-bottom: 1px solid var(--rule-strong);
+  }
+
+  .research-detail__topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+  }
+
+  .research-detail__topline > a,
+  .research-detail__footer > a {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    color: var(--primary-strong);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .research-detail__hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(18rem, 0.55fr);
+    gap: clamp(2.5rem, 8vw, 8rem);
+    align-items: end;
+    margin-top: var(--space-5);
+  }
+
+  .research-detail__hero h1 {
+    max-width: 13ch;
+    font-size: clamp(3rem, 7vw, 6.75rem);
+    letter-spacing: -0.055em;
+  }
+
+  .research-detail__dek {
+    max-width: 56rem;
+    margin-top: var(--space-4);
+    color: var(--ink-soft);
+    font-size: clamp(1.1rem, 2.1vw, 1.48rem);
+    line-height: 1.6;
+  }
+
+  .research-detail__status {
+    margin: 0;
+    border-top: 3px solid var(--ink);
+  }
+
+  .research-detail__status > div {
+    display: grid;
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+    gap: var(--space-3);
+    padding-block: 0.75rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .research-detail__status dt,
+  .ensemble-score dt {
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .research-detail__status dd {
+    color: var(--ink);
+    font-size: 0.92rem;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+
+  .research-detail__boundary {
+    display: grid;
+    grid-template-columns: minmax(10rem, 0.28fr) minmax(0, 1fr);
+    gap: var(--space-4);
+    margin-top: clamp(2.5rem, 5vw, 4rem);
+    padding: var(--space-4);
+    border: 2px solid var(--ink);
+    background: var(--yellow);
+    box-shadow: 6px 6px 0 var(--ink);
+  }
+
+  .research-detail__boundary strong {
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .research-detail__boundary p {
+    max-width: 64rem;
+    color: var(--ink);
+  }
+
+  .ensemble-score {
+    padding-block: clamp(3.5rem, 7vw, 6rem);
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .ensemble-score figcaption {
+    display: grid;
+    grid-template-columns: minmax(0, 0.85fr) minmax(18rem, 0.65fr);
+    gap: 0.75rem clamp(2rem, 8vw, 8rem);
+    align-items: end;
+    margin-bottom: var(--space-5);
+  }
+
+  .ensemble-score figcaption .eyebrow {
+    grid-column: 1 / -1;
+  }
+
+  .ensemble-score figcaption h2 {
+    font-size: clamp(2.4rem, 5vw, 4.6rem);
+  }
+
+  .ensemble-score figcaption > p:last-child {
+    color: var(--muted);
+  }
+
+  .ensemble-score__state {
+    display: grid;
+    grid-template-columns: minmax(12rem, 0.42fr) minmax(0, 1fr);
+    gap: var(--space-4);
+    align-items: center;
+    padding: var(--space-4);
+    color: var(--surface-strong);
+    background: var(--primary);
+  }
+
+  .ensemble-score__state strong {
+    font-family: var(--font-serif);
+    font-size: clamp(1.35rem, 2.5vw, 2rem);
+  }
+
+  .ensemble-score__state ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  .ensemble-score__state li {
+    padding: 0.32rem 0.55rem;
+    border: 1px solid rgb(255 255 255 / 55%);
+    color: var(--surface-strong);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+
+  .ensemble-score__roles {
+    border-top: 1px solid var(--ink);
+  }
+
+  .ensemble-score__role {
+    --role-color: var(--yellow);
+    display: grid;
+    grid-template-columns: minmax(11rem, 0.32fr) minmax(0, 1fr);
+    gap: var(--space-4);
+    padding-block: 1.4rem;
+    border-bottom: 1px solid var(--rule-strong);
+    background-image: repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent calc(12.5% - 1px),
+      rgb(25 25 35 / 5%) calc(12.5% - 1px),
+      rgb(25 25 35 / 5%) 12.5%
+    );
+  }
+
+  .ensemble-score__role:nth-child(2) {
+    --role-color: var(--teal);
+  }
+
+  .ensemble-score__role:nth-child(3) {
+    --role-color: var(--violet);
+  }
+
+  .ensemble-score__role:nth-child(4) {
+    --role-color: var(--primary);
+  }
+
+  .ensemble-score__role > header {
+    padding-left: var(--space-3);
+    border-left: 0.55rem solid var(--role-color);
+  }
+
+  .ensemble-score__role:nth-child(4) > header {
+    color: var(--ink);
+  }
+
+  .ensemble-score__role h3 {
+    font-family: var(--font-serif);
+    font-size: 1.45rem;
+  }
+
+  .ensemble-score__role header p {
+    margin-top: 0.2rem;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+  }
+
+  .ensemble-score__role dl {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+    margin: 0;
+  }
+
+  .ensemble-score__role dd {
+    margin-top: 0.35rem;
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+    line-height: 1.55;
+  }
+
+  .research-detail__prose > section:first-child h2 {
+    margin-top: 0;
+  }
+
+  .condition-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1px;
+    padding: 1px;
+    background: var(--ink);
+  }
+
+  .condition-card {
+    display: grid;
+    align-content: start;
+    gap: 0.8rem;
+    padding: var(--space-4);
+    background: var(--surface-strong);
+  }
+
+  .condition-card:nth-child(2) {
+    background: #eefaf6;
+  }
+
+  .condition-card:nth-child(3) {
+    background: var(--signal-soft);
+  }
+
+  .condition-card__code {
+    width: fit-content;
+    padding: 0.2rem 0.45rem;
+    border: 1px solid var(--ink);
+    color: var(--ink) !important;
+    background: var(--yellow);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+
+  .condition-card:nth-child(2) .condition-card__code {
+    background: var(--teal);
+  }
+
+  .condition-card:nth-child(3) .condition-card__code {
+    color: var(--surface-strong) !important;
+    background: var(--violet);
+  }
+
+  .condition-card h3 {
+    margin: 0;
+    font-size: 1.35rem;
+  }
+
+  .condition-card p {
+    font-size: 0.94rem;
+  }
+
+  .condition-card__test {
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--rule);
+  }
+
+  .implementation-evidence {
+    display: grid;
+    gap: 0;
+    border-top: 2px solid var(--ink);
+  }
+
+  .implementation-evidence article {
+    display: grid;
+    grid-template-columns: 5.5rem minmax(10rem, 0.38fr) minmax(0, 1fr);
+    gap: var(--space-3);
+    align-items: start;
+    padding-block: var(--space-3);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .implementation-evidence h4 {
+    margin: 0;
+    color: var(--ink);
+    font-family: var(--font-serif);
+    font-size: 1.08rem;
+    letter-spacing: -0.015em;
+    text-transform: none;
+  }
+
+  .implementation-evidence__status {
+    width: fit-content;
+    padding: 0.16rem 0.38rem;
+    border: 1px solid var(--ink);
+    color: var(--ink) !important;
+    background: var(--teal);
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+
+  .implementation-evidence__status--open {
+    background: var(--yellow);
+  }
+
+  .implementation-evidence article > p:last-child {
+    font-size: 0.94rem;
+  }
+
+  .implementation-evidence__note {
+    margin-top: var(--space-3) !important;
+    color: var(--muted) !important;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    line-height: 1.55;
+  }
+
+  .build-sequence {
+    padding: 0 !important;
+    margin-top: var(--space-5) !important;
+    border-top: 2px solid var(--ink);
+    list-style: none;
+  }
+
+  .build-sequence li {
+    display: grid;
+    grid-template-columns: 3rem minmax(0, 1fr);
+    gap: var(--space-4);
+    padding-block: var(--space-4);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .build-sequence li > span {
+    display: grid;
+    width: 2.5rem;
+    height: 2.5rem;
+    place-items: center;
+    border: 1px solid var(--ink);
+    color: var(--ink);
+    background: var(--yellow);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+  }
+
+  .build-sequence h3 {
+    margin: 0;
+    font-size: 1.35rem;
+  }
+
+  .build-sequence h3 + p {
+    margin-top: 0.45rem;
+  }
+
+  .research-note {
+    margin-block: var(--space-5);
+    padding: var(--space-4);
+    border: 2px solid var(--ink);
+    background: var(--yellow);
+  }
+
+  .research-note > p:last-child {
+    margin-top: var(--space-2);
+    color: var(--ink);
+  }
+
+  .evaluation-grid {
+    display: grid;
+    gap: 0;
+    border-top: 2px solid var(--ink);
+  }
+
+  .evaluation-grid article {
+    display: grid;
+    grid-template-columns: minmax(9rem, 0.35fr) minmax(0, 1fr);
+    gap: var(--space-4);
+    padding-block: var(--space-3);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .evaluation-grid h3 {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .scope-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    border-block: 2px solid var(--ink);
+  }
+
+  .scope-grid > section {
+    padding: var(--space-4) var(--space-4) var(--space-4) 0;
+  }
+
+  .scope-grid > section + section {
+    padding-inline: var(--space-4) 0;
+    border-left: 1px solid var(--rule-strong);
+  }
+
+  .scope-grid ul {
+    margin-bottom: 0;
+  }
+
+  .research-detail__footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-5);
+    align-items: end;
+    padding-block: var(--space-5);
+    border-block: 2px solid var(--ink);
+  }
+
+  .research-detail__footer > div > p:last-child {
+    max-width: 48rem;
+    margin-top: var(--space-2);
+    color: var(--muted);
+  }
+
+  @media (max-width: 70rem) {
+    .research-detail__hero-grid,
+    .ensemble-score figcaption {
+      grid-template-columns: 1fr;
+    }
+
+    .research-detail__status {
+      max-width: 38rem;
+    }
+  }
+
+  @media (max-width: 52rem) {
+    .research-detail__topline,
+    .research-detail__boundary,
+    .ensemble-score__state,
+    .ensemble-score__role,
+    .research-detail__footer {
+      grid-template-columns: 1fr;
+    }
+
+    .research-detail__topline {
+      display: grid;
+    }
+
+    .ensemble-score__role dl,
+    .condition-grid,
+    .scope-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .scope-grid > section,
+    .scope-grid > section + section {
+      padding-inline: 0;
+      border-left: 0;
+    }
+
+    .scope-grid > section + section {
+      padding-top: var(--space-4);
+      border-top: 1px solid var(--rule-strong);
+    }
+
+    .evaluation-grid article {
+      grid-template-columns: 1fr;
+      gap: 0.45rem;
+    }
+
+    .implementation-evidence article {
+      grid-template-columns: 1fr;
+      gap: 0.45rem;
+    }
+
+    .research-detail__footer > a {
+      justify-self: start;
+    }
+  }
+
+  @media (max-width: 40rem) {
+    .research-detail__hero h1 {
+      font-size: clamp(2.6rem, 13vw, 4.5rem);
+    }
+
+    .research-detail__status > div {
+      grid-template-columns: 1fr;
+      gap: 0.2rem;
+    }
+
+    .research-detail__boundary {
+      box-shadow: 4px 4px 0 var(--ink);
+    }
+
+    .ensemble-score__role {
+      background-image: none;
+    }
+  }
+</style>
