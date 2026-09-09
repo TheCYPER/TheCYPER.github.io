@@ -1,0 +1,17 @@
+title: Zelender · 庭
+description: An interactive Japanese koi garden for the browser and Chrome new tabs, pairing fish feeding and four weather soundscapes with a calendar and locally stored to-dos.
+url: https://thecyper.github.io/zelender/
+repoUrl: https://github.com/TheCYPER/zelender
+stack:
+  - TypeScript
+  - Three.js
+  - Web Audio API
+  - Chrome Extensions
+status: active
+draft: false
+featured: false
+year: 2026
+topics:
+  - Interactive Environments
+  - Browser Tools
+  - Creative Coding
