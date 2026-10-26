@@ -1,0 +1,16 @@
+title: BNNX
+description: Small trained neural networks compiled into pure contracts on BNB Chain (testnet). Anyone can call one with a free read-only call and check its answer against a reference program, integer for integer. The page lets you try 14 deployed models, including networks imported from Brevitas.
+url: https://thecyper.github.io/bnnx-showcase/
+repoUrl: https://github.com/TheCYPER/bnnx-showcase
+stack:
+  - Python
+  - PyTorch
+  - Solidity
+  - JavaScript
+status: active
+draft: false
+featured: false
+year: 2026
+topics:
+  - On-chain AI
+  - Developer Tools
